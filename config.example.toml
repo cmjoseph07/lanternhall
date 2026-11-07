@@ -1,0 +1,46 @@
+# Lanternhall install config.
+# `bun run setup` copies this file to ~/.config/lanternhall/config.toml on first run
+# (or to $LANTERNHALL_CONFIG_DIR/config.toml when that variable is set).
+# The Bun service and the scripts validate it at startup and stop with the key and
+# the reason when something is wrong. Unknown keys are errors, so typos never pass.
+
+# Free-form label for this install, such as "personal" or "work". It changes no behavior.
+profile = "personal"
+
+# Email of the owner account that `bun run setup` creates in TrailBase.
+owner_email = "owner@example.com"
+
+# IANA time zone used for days, weeks and schedules, such as "America/New_York".
+timezone = "UTC"
+
+# First day of the week: "monday" through "sunday".
+week_starts_on = "monday"
+
+[modules]
+# Optional modules to switch on. Core modules are always on and must not be listed.
+# A module needs its dependencies enabled too; validation names any that are missing.
+# Examples:
+#   enabled = ["habits"]
+#   enabled = ["habits", "learning", "personal-metrics"]
+#   enabled = ["people", "tickets", "dev-metrics"]
+enabled = []
+
+[network]
+# Browser origin served by Caddy. Must be localhost or end in .localhost,
+# which browsers resolve to loopback.
+hostname = "lanternhall.localhost"
+
+# Caddy HTTPS port: the app lives at https://<hostname>:<https_port>.
+https_port = 8443
+
+# TrailBase public API, proxied by Caddy under /api/.
+trailbase_port = 4000
+
+# TrailBase admin UI, reachable on 127.0.0.1 only.
+trailbase_admin_port = 4001
+
+# Bun service, proxied by Caddy under /service/.
+service_port = 4100
+
+# Valkey (job queue).
+valkey_port = 6379
