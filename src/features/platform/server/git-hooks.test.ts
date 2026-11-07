@@ -195,3 +195,35 @@ describe("pre-commit hook", () => {
 		timeout,
 	);
 });
+
+describe("commit-msg hook", () => {
+	test(
+		"rejects a message that is not a Conventional Commit",
+		async () => {
+			const before = head();
+			await stage("notes.md", "hello\n");
+
+			const result = commit("update stuff");
+
+			expect(result.exitCode).not.toBe(0);
+			expect(result.output).toContain("header must start with a type");
+			expect(head()).toBe(before);
+		},
+		timeout,
+	);
+
+	test(
+		"accepts a Conventional Commit",
+		async () => {
+			const before = head();
+			await stage("notes.md", "hello\n");
+
+			const result = commit("fix: handle empty config");
+
+			expect(result.exitCode).toBe(0);
+			expect(git(["rev-parse", "HEAD~1"]).trim()).toBe(before);
+			expect(git(["log", "-1", "--format=%s"]).trim()).toBe("fix: handle empty config");
+		},
+		timeout,
+	);
+});

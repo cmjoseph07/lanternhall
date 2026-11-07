@@ -17,3 +17,8 @@ pre-push:
       run: bun run typecheck
     - name: test
       run: bun test
+
+commit-msg:
+  jobs:
+    - name: conventional-commits
+      run: bun run check:commit-msg {1}

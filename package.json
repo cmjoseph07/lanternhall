@@ -9,7 +9,8 @@
 		"format": "biome check --write .",
 		"typecheck": "tsc --noEmit",
 		"check:denylist": "bun scripts/check-denylist.ts",
-		"check:release-age": "bun scripts/check-release-age.ts"
+		"check:release-age": "bun scripts/check-release-age.ts",
+		"check:commit-msg": "bun scripts/check-commit-msg.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.4",
