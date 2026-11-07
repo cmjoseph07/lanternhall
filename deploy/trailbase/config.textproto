@@ -1,0 +1,18 @@
+# Lanternhall TrailBase config template.
+# `bun run setup` renders it into the depot as config.textproto; the test harness uses it as is.
+# Schema: https://github.com/trailbaseio/trailbase/blob/main/crates/core/proto/config.proto
+#
+# Rules, enforced by src/features/platform/server/trailbase-config.test.ts:
+# - Every record API grants access through acl_authenticated only; acl_world never appears.
+# - Every record API sets enable_subscriptions: true (TanStack writes wait for their id over SSE).
+# - Record transactions stay on and the daily BACKUP job stays enabled.
+
+server {
+  application_name: "Lanternhall"
+  enable_record_transactions: true
+}
+
+jobs {
+  # Keeps server.backup_window_size backups (default 5) in the depot's backups/ directory.
+  system_jobs: [{ id: BACKUP, schedule: "@daily", disabled: false }]
+}
