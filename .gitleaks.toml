@@ -1,0 +1,3 @@
+# Shared by the pre-commit hook and CI: gitleaks' default rules, nothing removed.
+[extend]
+useDefault = true

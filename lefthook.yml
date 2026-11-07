@@ -1,0 +1,19 @@
+# Git hooks, installed into .git/hooks by `bun install` (package.json `prepare`).
+# Tools resolve from PATH, so mise must be activated or its shims on PATH.
+
+pre-commit:
+  jobs:
+    - name: gitleaks
+      run: gitleaks git --pre-commit --staged --redact --no-banner --verbose
+    - name: denylist
+      run: bun run check:denylist
+    - name: biome
+      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+
+pre-push:
+  jobs:
+    - name: typecheck
+      run: bun run typecheck
+    - name: test
+      run: bun test

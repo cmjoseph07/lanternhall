@@ -1,3 +1,5 @@
 [tools]
 bun = "1.4.4"
 "github:trailbaseio/trailbase" = "0.35.8"
+"github:evilmartians/lefthook" = { version = "2.2.2", bin = "lefthook" }
+"github:gitleaks/gitleaks" = "8.30.1"
