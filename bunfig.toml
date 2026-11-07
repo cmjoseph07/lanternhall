@@ -1,0 +1,7 @@
+[install]
+# Exact versions only, and nothing published less than 7 days ago (seconds).
+exact = true
+minimumReleaseAge = 604800
+
+[test]
+coverageThreshold = { lines = 0.9, functions = 0.9 }

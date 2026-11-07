@@ -1,0 +1,23 @@
+# Dependencies and generated output
+node_modules/
+coverage/
+build/
+.svelte-kit/
+*.bun-build
+
+# Install config, secrets, databases and backups live outside the repo;
+# these patterns are a second line of defense.
+config.toml
+secrets.toml
+denylist.txt
+.env
+.env.*
+*.pem
+*.key
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.db
+*.db-*
+backups/
+*.bak

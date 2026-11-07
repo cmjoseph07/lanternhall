@@ -1,0 +1,44 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true
+	},
+	"formatter": {
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"linter": {
+		"rules": {
+			"preset": "recommended",
+			"style": {
+				"noDefaultExport": "error",
+				"noEnum": "error",
+				"noNonNullAssertion": "error",
+				"useImportType": "error",
+				"useExportType": "error",
+				"useFilenamingConvention": {
+					"level": "error",
+					"options": { "filenameCases": ["kebab-case"] }
+				}
+			},
+			"suspicious": {
+				"noExplicitAny": "error"
+			},
+			"performance": {
+				"noBarrelFile": "error"
+			}
+		}
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}
