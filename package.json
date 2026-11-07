@@ -8,7 +8,8 @@
 		"lint": "biome check .",
 		"format": "biome check --write .",
 		"typecheck": "tsc --noEmit",
-		"check:denylist": "bun scripts/check-denylist.ts"
+		"check:denylist": "bun scripts/check-denylist.ts",
+		"check:release-age": "bun scripts/check-release-age.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.4",
