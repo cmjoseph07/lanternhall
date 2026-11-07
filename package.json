@@ -6,7 +6,8 @@
 	"scripts": {
 		"lint": "biome check .",
 		"format": "biome check --write .",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"check:denylist": "bun scripts/check-denylist.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.4",
