@@ -38,3 +38,5 @@ npm-debug.log
 # Database files (including -wal and -shm)
 *.db*
 
+# Dialyzer PLTs (rebuilt locally, cached in CI)
+/priv/plts/

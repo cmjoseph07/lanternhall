@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned by commit SHA (tag in the comment); each was at least 7 days old when pinned.
+# Hex is pinned for the same reason; rebar3 comes from builds.hex.pm for this Elixir version.
+
+jobs:
+  ubuntu:
+    name: Ubuntu (all gates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+
+      - name: Read toolchain versions
+        id: versions
+        run: |
+          otp=$(erl -noshell -eval '{ok, V} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:put_chars(string:trim(V)), halt().')
+          elixir=$(elixir -e 'IO.write(System.version())')
+          echo "key=${{ runner.os }}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache deps and _build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ steps.versions.outputs.key }}-
+
+      - name: Install Hex and rebar3
+        run: |
+          mix local.hex 2.6.0 --force
+          mix local.rebar --force
+
+      - name: Fetch deps
+        run: mix deps.get --check-locked
+
+      - name: Format, compile, Credo, Sobelow, tests with coverage gate
+        run: mix precommit
+
+      - name: Restore Dialyzer PLT
+        id: plt
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: priv/plts
+          key: plt-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: plt-${{ steps.versions.outputs.key }}-
+
+      - name: Build Dialyzer PLT
+        run: mix dialyzer --plt
+
+      - name: Save Dialyzer PLT
+        if: steps.plt.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: priv/plts
+          key: plt-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+
+      - name: Dialyzer
+        run: mix dialyzer --format github
+
+  macos:
+    name: macOS (compile, tests, prod release)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+
+      - name: Read toolchain versions
+        id: versions
+        run: |
+          otp=$(erl -noshell -eval '{ok, V} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:put_chars(string:trim(V)), halt().')
+          elixir=$(elixir -e 'IO.write(System.version())')
+          echo "key=${{ runner.os }}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache deps and _build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ steps.versions.outputs.key }}-
+
+      - name: Install Hex and rebar3
+        run: |
+          mix local.hex 2.6.0 --force
+          mix local.rebar --force
+
+      - name: Fetch deps
+        run: mix deps.get --check-locked
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
+
+      - name: Tests
+        run: mix test --exclude e2e
+
+      - name: Prod release
+        run: mix release --overwrite
+        env:
+          MIX_ENV: prod

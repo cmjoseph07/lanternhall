@@ -11,7 +11,18 @@ defmodule Lanternhall.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      test_coverage: [
+        summary: [threshold: 90],
+        # Only compile-time `quote` blocks for `use LanternhallWeb, ...`; runtime
+        # coverage can never reach them.
+        ignore_modules: [LanternhallWeb]
+      ],
+      dialyzer: [
+        plt_local_path: "priv/plts",
+        plt_core_path: "priv/plts",
+        flags: [:unmatched_returns, :error_handling, :extra_return, :missing_return]
+      ]
     ]
   end
 
@@ -68,7 +79,10 @@ defmodule Lanternhall.MixProject do
       {:telemetry_metrics, "== 1.2.0"},
       {:telemetry_poller, "== 1.3.0"},
       {:jason, "== 1.4.5"},
-      {:bandit, "== 1.14.1"}
+      {:bandit, "== 1.14.1"},
+      {:credo, "== 1.7.19", only: [:dev, :test], runtime: false},
+      {:sobelow, "== 0.18.1", only: [:dev, :test], runtime: false},
+      {:dialyxir, "== 1.4.8", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -91,7 +105,13 @@ defmodule Lanternhall.MixProject do
         "esbuild lanternhall --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "credo --strict",
+        "sobelow --config",
+        "test --exclude e2e --cover"
+      ]
     ]
   end
 end

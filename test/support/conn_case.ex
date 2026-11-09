@@ -17,6 +17,8 @@ defmodule LanternhallWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   using do
     quote do
       # The default endpoint for testing
@@ -32,7 +34,8 @@ defmodule LanternhallWeb.ConnCase do
   end
 
   setup tags do
-    Lanternhall.DataCase.setup_sandbox(tags)
+    pid = Sandbox.start_owner!(Lanternhall.Repo, shared: not tags[:async])
+    on_exit(fn -> Sandbox.stop_owner(pid) end)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

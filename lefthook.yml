@@ -1,0 +1,24 @@
+# Git hooks (SPEC.md section 8). Install once per clone: `lefthook install`.
+# Dialyzer and E2E run in CI only.
+
+pre-commit:
+  jobs:
+    - name: format
+      glob: "*.{ex,exs,heex}"
+      run: mix format --check-formatted {staged_files}
+
+    - name: credo
+      glob: "*.{ex,exs}"
+      run: mix credo --strict {staged_files}
+
+    - name: gitleaks
+      run: gitleaks git --pre-commit --staged --redact --no-banner --verbose
+
+pre-push:
+  piped: true
+  jobs:
+    - name: compile
+      run: mix compile --warnings-as-errors
+
+    - name: test
+      run: mix test --exclude e2e --cover
