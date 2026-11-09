@@ -10,14 +10,20 @@ config :lanternhall, Lanternhall.Repo,
   pool_size: 5,
   pool: Ecto.Adapters.SQL.Sandbox
 
-# We don't run a server during test. If one is required,
-# you can enable the server option below.
+# The server runs during tests so real-browser E2E tests (`mix test --only e2e`)
+# can open http://localhost:4002.
 config :lanternhall, LanternhallWeb.Endpoint,
   url: [host: "localhost", port: 4002],
   http: [port: 4002],
   check_origin: ["//localhost:4002"],
   secret_key_base: "xxUAB/U3HD+Ud+Xn9HKZsLfjW/4xEpYNQnEfIRzIISlidURDmJVFFGTAN0i9bF9g",
-  server: false
+  server: true
+
+# Real-browser E2E tests: PhoenixTest driven through Playwright's Chromium,
+# installed under assets/node_modules by `pnpm --dir assets install`.
+config :phoenix_test,
+  otp_app: :lanternhall,
+  playwright: [browser: :chromium]
 
 # Print only warnings and errors during test
 config :logger, level: :warning

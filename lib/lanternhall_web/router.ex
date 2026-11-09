@@ -1,13 +1,16 @@
 defmodule LanternhallWeb.Router do
   use LanternhallWeb, :router
 
+  # No `put_secure_browser_headers` here: LanternhallWeb.Plugs.SecurityHeaders sets the
+  # CSP (with a per-request nonce) and the other security headers on every response in
+  # the endpoint, before this router runs; Phoenix's default CSP would replace it.
+  # sobelow_skip ["Config.Headers"]
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {LanternhallWeb.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
   end
 
   pipeline :api do

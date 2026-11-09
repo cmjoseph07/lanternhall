@@ -14,9 +14,13 @@ defmodule Lanternhall.MixProject do
       listeners: [Phoenix.CodeReloader],
       test_coverage: [
         summary: [threshold: 90],
-        # Only compile-time `quote` blocks for `use LanternhallWeb, ...`; runtime
-        # coverage can never reach them.
-        ignore_modules: [LanternhallWeb]
+        ignore_modules: [
+          # Only compile-time `quote` blocks for `use LanternhallWeb, ...`; runtime
+          # coverage can never reach them.
+          LanternhallWeb,
+          # Test support used only by `mix test --only e2e`, which runs outside this gate.
+          LanternhallWeb.E2ECase
+        ]
       ],
       dialyzer: [
         plt_local_path: "priv/plts",
@@ -82,7 +86,11 @@ defmodule Lanternhall.MixProject do
       {:bandit, "== 1.14.1"},
       {:credo, "== 1.7.19", only: [:dev, :test], runtime: false},
       {:sobelow, "== 0.18.1", only: [:dev, :test], runtime: false},
-      {:dialyxir, "== 1.4.8", only: [:dev, :test], runtime: false}
+      {:dialyxir, "== 1.4.8", only: [:dev, :test], runtime: false},
+      {:phoenix_test, "== 0.14.0", only: :test, runtime: false},
+      {:phoenix_test_playwright, "== 0.19.0", only: :test, runtime: false},
+      # Pinned directly: phoenix_test_playwright's `~> 0.15` would allow a newer one.
+      {:playwright_ex, "== 0.15.0", only: :test, runtime: false}
     ]
   end
 
@@ -110,6 +118,7 @@ defmodule Lanternhall.MixProject do
         "compile --warnings-as-errors",
         "credo --strict",
         "sobelow --config",
+        "cmd pnpm --dir assets exec biome check js",
         "test --exclude e2e --cover"
       ]
     ]

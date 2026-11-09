@@ -1,0 +1,2 @@
+# Same rule as SPEC.md section 4: only versions published at least 7 days ago (in minutes).
+minimumReleaseAge: 10080

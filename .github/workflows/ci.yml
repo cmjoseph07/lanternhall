@@ -51,7 +51,10 @@ jobs:
       - name: Fetch deps
         run: mix deps.get --check-locked
 
-      - name: Format, compile, Credo, Sobelow, tests with coverage gate
+      - name: Install JS dev tools
+        run: pnpm --dir assets install --frozen-lockfile
+
+      - name: Format, compile, Credo, Sobelow, Biome, tests with coverage gate
         run: mix precommit
 
       - name: Restore Dialyzer PLT
@@ -74,6 +77,64 @@ jobs:
 
       - name: Dialyzer
         run: mix dialyzer --format github
+
+  e2e:
+    name: Ubuntu (E2E in Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+
+      - name: Read toolchain versions
+        id: versions
+        run: |
+          otp=$(erl -noshell -eval '{ok, V} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:put_chars(string:trim(V)), halt().')
+          elixir=$(elixir -e 'IO.write(System.version())')
+          echo "key=${{ runner.os }}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache deps and _build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ steps.versions.outputs.key }}-
+
+      - name: Install Hex and rebar3
+        run: |
+          mix local.hex 2.6.0 --force
+          mix local.rebar --force
+
+      - name: Fetch deps
+        run: mix deps.get --check-locked
+
+      - name: Install JS dev tools
+        run: pnpm --dir assets install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('assets/pnpm-lock.yaml') }}
+
+      # Downloads Chromium only on a cache miss; always installs its system libraries.
+      - name: Install Chromium
+        run: pnpm --dir assets exec playwright install --with-deps chromium
+
+      - name: Build assets
+        run: |
+          mix assets.setup
+          mix assets.build
+
+      - name: E2E tests
+        run: mix test --only e2e
 
   macos:
     name: macOS (compile, tests, prod release)
