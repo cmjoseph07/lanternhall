@@ -1,6 +1,9 @@
 defmodule LanternhallWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :lanternhall
 
+  alias LanternhallWeb.Plugs.HostCheck
+  alias LanternhallWeb.Plugs.SecurityHeaders
+
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
@@ -15,9 +18,21 @@ defmodule LanternhallWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
-  # First, so static files, `/healthz`, HTML and error pages all carry the headers.
   # `code_reloading?` is true in dev only, where dev tools need the CSP carve-out.
-  plug LanternhallWeb.Plugs.SecurityHeaders, dev_tools: code_reloading?
+  @security_headers SecurityHeaders.init(dev_tools: code_reloading?)
+
+  # Phoenix dispatches `socket` paths (LiveView, live reload) before the first `plug`
+  # below, so the security headers and the Host check wrap the whole endpoint instead:
+  # every response carries the headers, and every request, WebSocket upgrades included,
+  # passes the Host check first (SPEC-platform.md section 3.3).
+  def call(conn, opts) do
+    conn =
+      conn
+      |> SecurityHeaders.call(@security_headers)
+      |> HostCheck.call([])
+
+    if conn.halted, do: conn, else: super(conn, opts)
+  end
 
   # Serve at "/" the static files from "priv/static" directory.
   #
