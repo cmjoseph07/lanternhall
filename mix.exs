@@ -118,7 +118,7 @@ defmodule Lanternhall.MixProject do
         "compile --warnings-as-errors",
         "credo --strict",
         "sobelow --config",
-        "cmd pnpm --dir assets exec biome check js",
+        "cmd pnpm --dir assets exec biome check js scripts",
         "test --exclude e2e --cover"
       ]
     ]
