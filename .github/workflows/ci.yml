@@ -19,13 +19,16 @@ concurrency:
 # Hex is pinned for the same reason; rebar3 comes from builds.hex.pm for this Elixir version.
 # Each job caches its own deps and _build (key starts with the job id): the jobs build
 # different envs, and a shared key would keep only the first job's _build.
+# Runner images are pinned (newest Ubuntu LTS and macOS), so an image change is a reviewed
+# commit. Cache keys carry the image ($ImageOS), so a new image never restores native code
+# (NIFs, Chromium) built on the old one.
 # Checkout does not persist the token: no step pushes or fetches, so later steps (deps,
 # package scripts, tests) get no git credentials to read.
 
 jobs:
   ubuntu:
     name: Ubuntu (all gates)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,7 +44,8 @@ jobs:
         run: |
           otp=$(erl -noshell -eval '{ok, V} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:put_chars(string:trim(V)), halt().')
           elixir=$(elixir -e 'IO.write(System.version())')
-          echo "key=${{ runner.os }}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?}" >> "$GITHUB_OUTPUT"
+          echo "key=${ImageOS:?}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
 
       - name: Cache deps and _build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -89,7 +93,7 @@ jobs:
 
   e2e:
     name: Ubuntu (E2E in Chromium)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     env:
       MIX_ENV: test
@@ -107,7 +111,8 @@ jobs:
         run: |
           otp=$(erl -noshell -eval '{ok, V} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:put_chars(string:trim(V)), halt().')
           elixir=$(elixir -e 'IO.write(System.version())')
-          echo "key=${{ runner.os }}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?}" >> "$GITHUB_OUTPUT"
+          echo "key=${ImageOS:?}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
 
       - name: Cache deps and _build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -133,7 +138,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('assets/pnpm-lock.yaml') }}
+          key: playwright-${{ steps.versions.outputs.image }}-${{ runner.arch }}-${{ hashFiles('assets/pnpm-lock.yaml') }}
 
       # Downloads Chromium only on a cache miss; always installs its system libraries.
       - name: Install Chromium
@@ -149,7 +154,7 @@ jobs:
 
   macos:
     name: macOS (compile, tests, prod release)
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -165,7 +170,8 @@ jobs:
         run: |
           otp=$(erl -noshell -eval '{ok, V} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:put_chars(string:trim(V)), halt().')
           elixir=$(elixir -e 'IO.write(System.version())')
-          echo "key=${{ runner.os }}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?}" >> "$GITHUB_OUTPUT"
+          echo "key=${ImageOS:?}-${{ runner.arch }}-otp-${otp}-elixir-${elixir}" >> "$GITHUB_OUTPUT"
 
       - name: Cache deps and _build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
