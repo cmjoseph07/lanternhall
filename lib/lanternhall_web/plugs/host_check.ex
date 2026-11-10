@@ -6,7 +6,9 @@ defmodule LanternhallWeb.Plugs.HostCheck do
   The app listens on loopback only, but a web page can still reach it through DNS
   rebinding: the page's own name first resolves to the attacker's server, then to
   `127.0.0.1`, and the browser keeps sending that name as `Host`. Only requests for
-  `localhost:<port>` get through.
+  `localhost:<port>` get through. The host is pinned here, not read from the endpoint's
+  `url` config, so a config change cannot widen it; the port is the one the endpoint
+  listens on.
 
   `LanternhallWeb.Endpoint.call/2` runs this before Phoenix dispatches sockets, so
   LiveView WebSocket upgrades are checked too.
@@ -18,12 +20,13 @@ defmodule LanternhallWeb.Plugs.HostCheck do
   @impl Plug
   def init(opts), do: opts
 
+  @host "localhost"
+
   @impl Plug
   def call(conn, _opts) do
     endpoint = Phoenix.Controller.endpoint_module(conn)
-    %URI{host: host, port: port} = endpoint.struct_url()
 
-    if conn.host == host and conn.port == port do
+    if conn.host == @host and conn.port == endpoint.config(:http)[:port] do
       conn
     else
       conn

@@ -36,6 +36,12 @@ defmodule LanternhallWeb.EndpointConfigTest do
         assert endpoint[:http][:port] == unquote(port)
       end
 
+      # Generated URLs and the Host check's 400 body name this address.
+      test "builds URLs for http://localhost:#{port}", %{endpoint: endpoint} do
+        assert endpoint[:url][:host] == "localhost"
+        assert endpoint[:url][:port] == unquote(port)
+      end
+
       test "accepts LiveView sockets only from http://localhost:#{port}", %{endpoint: endpoint} do
         assert endpoint[:check_origin] == ["//localhost:#{unquote(port)}"]
       end
