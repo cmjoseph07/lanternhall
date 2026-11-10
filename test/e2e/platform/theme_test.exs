@@ -86,6 +86,65 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  test "system follows a live change of the operating system's color scheme", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("system")
+    |> assert_has("html[data-theme=#{@light}]")
+    |> emulate_color_scheme("dark")
+    |> assert_has("html[data-theme=#{@dark}]")
+    |> assert_pressed("system")
+    |> emulate_color_scheme("light")
+    |> assert_has("html[data-theme=#{@light}]")
+    |> assert_clean_browser()
+  end
+
+  test "system with a dark operating system renders dark from the first frame", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("system")
+    |> emulate_color_scheme("dark")
+    |> visit(~p"/")
+    |> assert_first_frame(@dark)
+    |> assert_has("[data-phx-main].phx-connected")
+    |> assert_pressed("system")
+    |> assert_clean_browser()
+  end
+
+  test "a light or dark choice ignores the operating system's color scheme", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("light")
+    |> emulate_color_scheme("dark")
+    |> assert_has("html[data-theme=#{@light}]")
+    |> assert_pressed("light")
+    |> choose_theme("dark")
+    |> emulate_color_scheme("light")
+    |> assert_has("html[data-theme=#{@dark}]")
+    |> assert_pressed("dark")
+    |> assert_clean_browser()
+  end
+
+  test "a choice made in one tab applies to the app's other open tabs", %{conn: conn} do
+    other_tab = open_tab(conn)
+
+    conn = conn |> visit(~p"/") |> assert_has("[data-phx-main].phx-connected")
+
+    other_tab
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("light")
+    |> assert_has("html[data-theme=#{@light}]")
+
+    conn
+    |> assert_has("html[data-theme=#{@light}]")
+    |> assert_pressed("light")
+    |> assert_clean_browser()
+  end
+
   test "the toggle's buttons are named for screen readers", %{conn: conn} do
     conn
     |> visit(~p"/")
@@ -335,6 +394,35 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
       ~s|document.querySelectorAll('#theme-toggle button[aria-pressed="true"]').length|,
       fn pressed -> assert pressed == 1 end
     )
+  end
+
+  # Switches the emulated operating system color scheme with Playwright's
+  # `page.emulateMedia` (https://playwright.dev/docs/api/class-page), which PlaywrightEx
+  # has no function for yet, and returns once the page's media query `change` event has
+  # fired. The page's own listener was added first, so it has run by then too.
+  defp emulate_color_scheme(conn, scheme) do
+    conn =
+      Playwright.evaluate(conn, """
+      void (window.__schemeChanged = new Promise((resolve) =>
+        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", resolve, { once: true })))
+      """)
+
+    reply =
+      PlaywrightEx.send(
+        %{guid: conn.page_id, method: :emulate_media, params: %{color_scheme: scheme}},
+        timeout: Playwright.Config.global(:timeout)
+      )
+
+    refute Map.has_key?(reply, :error), "emulateMedia failed: #{inspect(reply)}"
+    Playwright.evaluate(conn, "window.__schemeChanged.then(() => true)", &assert(&1))
+  end
+
+  # A second page in the test's browser context, as a second tab of the same browser.
+  defp open_tab(conn) do
+    {:ok, page} =
+      BrowserContext.new_page(conn.context_id, timeout: Playwright.Config.global(:timeout))
+
+    %{conn | page_id: page.guid, frame_id: page.main_frame.guid}
   end
 
   # The root took exactly one theme, before the first frame was painted.
