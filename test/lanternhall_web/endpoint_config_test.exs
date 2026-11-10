@@ -48,6 +48,12 @@ defmodule LanternhallWeb.EndpointConfigTest do
     end
   end
 
+  # The config above is what each env asks for; this is what the test server really
+  # bound, so nothing between config and listener can widen it.
+  test "the running test endpoint listens on 127.0.0.1:4002 only" do
+    assert LanternhallWeb.Endpoint.server_info(:http) == {:ok, {{127, 0, 0, 1}, 4002}}
+  end
+
   # Browsers send a host's cookies to every port on it, so envs sharing a cookie name on
   # one machine would overwrite each other's session and CSRF token.
   test "dev, test and prod each name their session cookie differently", %{install: install} do
