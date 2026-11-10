@@ -79,13 +79,26 @@ defmodule Lanternhall.Platform.Features do
     end
   end
 
-  @doc "Child specs of every enabled feature, in registry order."
-  @spec children(Config.t()) :: [Supervisor.child_spec() | {module(), term()} | module()]
+  @doc """
+  One supervisor per enabled feature with children, in registry order, with id
+  `{:feature, id}`. Child ids then only need to be unique within their feature.
+
+  Each is `:transient`: if a child crashes past the supervisor's restart limit, that
+  feature stops (and is logged) while the rest of the app keeps running.
+  """
+  @spec children(Config.t()) :: [Supervisor.child_spec()]
   def children(%Config{features: features} = config) do
     for feature <- features,
         implements?(feature, :children, 1),
-        child <- feature.children(config),
-        do: child
+        children = feature.children(config),
+        children != [] do
+      %{
+        id: {:feature, feature.id()},
+        start: {Supervisor, :start_link, [children, [strategy: :one_for_one]]},
+        type: :supervisor,
+        restart: :transient
+      }
+    end
   end
 
   # Each `@behaviour` line is stored as its own `behaviour: [module]` attribute.

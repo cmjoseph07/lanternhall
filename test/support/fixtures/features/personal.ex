@@ -19,11 +19,8 @@ defmodule Lanternhall.Fixtures.Features.Personal do
 
   @impl true
   def children(config) do
-    [
-      Supervisor.child_spec({Agent, fn -> config.feature_config.fixture_greeting end},
-        id: __MODULE__
-      )
-    ]
+    # Default child id `Agent`, the same as the other fixture's, as unrelated features' ids may be.
+    [{Agent, fn -> config.feature_config.fixture_greeting end}]
   end
 
   defp greeting(:error), do: {:error, "is required while :fixture_personal is enabled"}

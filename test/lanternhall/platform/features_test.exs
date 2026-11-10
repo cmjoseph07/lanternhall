@@ -19,6 +19,35 @@ defmodule Lanternhall.Platform.FeaturesTest do
     }
   end
 
+  # Stands in for Lanternhall.Supervisor, which holds the feature supervisors in the app.
+  defp start_tree(config) do
+    start_supervised!(%{
+      id: :tree,
+      start: {Supervisor, :start_link, [Features.children(config), [strategy: :one_for_one]]},
+      type: :supervisor
+    })
+  end
+
+  defp feature_pid(sup, id) do
+    {_id, pid, :supervisor, _modules} =
+      List.keyfind(Supervisor.which_children(sup), {:feature, id}, 0)
+
+    pid
+  end
+
+  defp agent_pid(feature_sup) do
+    [{Agent, pid, :worker, _}] = Supervisor.which_children(feature_sup)
+    pid
+  end
+
+  defp agent_state(sup, id), do: sup |> feature_pid(id) |> agent_pid() |> Agent.get(& &1)
+
+  defp kill_and_await(pid) do
+    ref = Process.monitor(pid)
+    Process.exit(pid, :kill)
+    assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
+  end
+
   describe "all/0" do
     test "is the :features list from config, which test extends with the fixtures" do
       assert Features.all() == @registry
@@ -144,29 +173,62 @@ defmodule Lanternhall.Platform.FeaturesTest do
   end
 
   describe "children/1" do
-    test "collects the children of enabled features only" do
+    test "gives each enabled feature with children its own supervisor" do
       config = config([PlatformFeature, Core], %{fixture_level: 3})
 
-      assert [%{id: Core, start: {Agent, :start_link, [state]}}] = Features.children(config)
+      assert [
+               %{
+                 id: {:feature, :fixture_core},
+                 start: {Supervisor, :start_link, [[{Agent, state}], [strategy: :one_for_one]]},
+                 type: :supervisor,
+                 restart: :transient
+               }
+             ] = Features.children(config)
+
       assert state.() == 3
     end
 
     test "hands each feature the validated config" do
       config = config([Personal], %{fixture_greeting: "hello"})
 
-      assert [%{id: Personal, start: {Agent, :start_link, [state]}}] = Features.children(config)
+      assert [%{start: {Supervisor, :start_link, [[{Agent, state}], _opts]}}] =
+               Features.children(config)
+
       assert state.() == "hello"
+    end
+
+    test "starts features whose children share a child id" do
+      config = config([Core, Personal], %{fixture_level: 3, fixture_greeting: "hello"})
+      sup = start_tree(config)
+
+      assert [Core, Personal] |> Enum.map(&agent_state(sup, &1.id())) == [3, "hello"]
+    end
+
+    test "stops a feature whose child keeps crashing and leaves the others running" do
+      config = config([Core, Personal], %{fixture_level: 3, fixture_greeting: "hello"})
+      sup = start_tree(config)
+      feature_sup = feature_pid(sup, :fixture_core)
+      ref = Process.monitor(feature_sup)
+
+      # The default restart intensity allows 3 restarts in 5 seconds; the 4th crash ends it.
+      ExUnit.CaptureLog.capture_log(fn ->
+        for _ <- 1..4, do: kill_and_await(agent_pid(feature_sup))
+        assert_receive {:DOWN, ^ref, :process, ^feature_sup, :shutdown}
+      end)
+
+      assert feature_pid(sup, :fixture_core) == :undefined
+      assert agent_state(sup, :fixture_personal) == "hello"
     end
   end
 
   describe "the running app" do
-    test "supervises enabled features' children and not disabled ones" do
+    test "supervises enabled features and not disabled ones" do
       ids =
         for {id, _pid, _type, _modules} <- Supervisor.which_children(Lanternhall.Supervisor),
             do: id
 
-      assert Core in ids
-      refute Personal in ids
+      assert {:feature, :fixture_core} in ids
+      refute {:feature, :fixture_personal} in ids
     end
 
     test "boots with the test install's enabled set" do

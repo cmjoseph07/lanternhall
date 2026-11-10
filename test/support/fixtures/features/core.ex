@@ -19,11 +19,8 @@ defmodule Lanternhall.Fixtures.Features.Core do
 
   @impl true
   def children(config) do
-    [
-      Supervisor.child_spec({Agent, fn -> config.feature_config.fixture_level end},
-        id: __MODULE__
-      )
-    ]
+    # Default child id `Agent`, the same as the other fixture's, as unrelated features' ids may be.
+    [{Agent, fn -> config.feature_config.fixture_level end}]
   end
 
   defp level(:error), do: {:ok, 1}

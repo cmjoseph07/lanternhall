@@ -33,7 +33,11 @@ defmodule Lanternhall.Platform.Feature do
   @doc "Keys this feature adds to the install config, each with its validator."
   @callback config_keys() :: [{atom(), validator()}]
 
-  @doc "Child specs to supervise while the feature is enabled, given the validated config."
+  @doc """
+  Child specs to supervise while the feature is enabled, given the validated config.
+  They run under the feature's own supervisor, so child ids need only be unique within
+  the feature.
+  """
   @callback children(Config.t()) :: [Supervisor.child_spec() | {module(), term()} | module()]
 
   @optional_callbacks children: 1
