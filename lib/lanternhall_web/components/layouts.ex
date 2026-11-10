@@ -66,7 +66,11 @@ defmodule LanternhallWeb.Layouts do
 
   def flash_group(assigns) do
     ~H"""
-    <div id={@id} aria-live="polite">
+    <div
+      id={@id}
+      aria-live="polite"
+      class="toast toast-top toast-end top-16 end-4 z-50 sm:end-6 lg:end-8"
+    >
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
 

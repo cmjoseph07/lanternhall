@@ -60,25 +60,23 @@ defmodule LanternhallWeb.CoreComponents do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class="toast toast-top toast-end z-50"
-      {@rest}
-    >
-      <div class={[
+      class={[
         "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
         @kind == :info && "alert-info",
         @kind == :error && "alert-error"
-      ]}>
-        <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
-        <div>
-          <p :if={@title} class="font-semibold">{@title}</p>
-          <p>{msg}</p>
-        </div>
-        <div class="flex-1" />
-        <button type="button" class="group self-start cursor-pointer" aria-label="close">
-          <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
-        </button>
+      ]}
+      {@rest}
+    >
+      <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
+      <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
+      <div>
+        <p :if={@title} class="font-semibold">{@title}</p>
+        <p>{msg}</p>
       </div>
+      <div class="flex-1" />
+      <button type="button" class="group self-start cursor-pointer" aria-label="close">
+        <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
+      </button>
     </div>
     """
   end
