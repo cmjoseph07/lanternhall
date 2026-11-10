@@ -74,6 +74,15 @@ defmodule Lanternhall.Platform.FeaturesTest do
                 ]}
     end
 
+    test "refuses a config key listed without its validator" do
+      assert Features.validate([Invalid.BareConfigKey]) ==
+               {:error,
+                [
+                  {:features,
+                   "has Lanternhall.Fixtures.Features.Invalid.BareConfigKey.config_keys/0 return [:fixture_bare]; it must be a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"}
+                ]}
+    end
+
     test "refuses improper lists from depends_on/0 and config_keys/0" do
       assert {:error, [{:features, depends_on}, {:features, config_keys}]} =
                Features.validate([Invalid.ImproperLists])
