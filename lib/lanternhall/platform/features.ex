@@ -66,6 +66,19 @@ defmodule Lanternhall.Platform.Features do
     end
   end
 
+  @doc """
+  Whether feature `id` is in the enabled set stored at boot. Raises for an id no feature
+  has, so a mistyped route gate fails loudly instead of quietly answering 404.
+  """
+  @spec enabled?(Feature.id()) :: boolean()
+  def enabled?(id) do
+    cond do
+      Enum.any?(Config.get().features, &(&1.id() == id)) -> true
+      Enum.any?(all(), &(&1.id() == id)) -> false
+      true -> raise ArgumentError, "no feature has id #{inspect(id)}"
+    end
+  end
+
   @doc "Child specs of every enabled feature, in registry order."
   @spec children(Config.t()) :: [Supervisor.child_spec() | {module(), term()} | module()]
   def children(%Config{features: features} = config) do

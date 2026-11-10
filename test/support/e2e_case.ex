@@ -54,15 +54,18 @@ defmodule LanternhallWeb.E2ECase do
   @doc """
   Asserts the current page saw no CSP violation, and that no console error
   or uncaught page error happened since the test started.
+
+  `expect_errors:` lists the console errors a test expects, in order, such as the
+  browser's own report of a 404 page; the errors must match it exactly.
   """
-  def assert_clean_browser(conn) do
+  def assert_clean_browser(conn, opts \\ []) do
     Playwright.evaluate(conn, "window.__cspViolations", fn violations ->
       assert violations == [], "CSP violations: #{inspect(violations)}"
     end)
 
     # The evaluate round trip above passed every earlier browser event to this process.
     errors = browser_errors([])
-    assert errors == [], "Browser errors: #{inspect(errors)}"
+    assert errors == Keyword.get(opts, :expect_errors, []), "Browser errors: #{inspect(errors)}"
 
     conn
   end

@@ -19,6 +19,9 @@ config :lanternhall, LanternhallWeb.Endpoint,
   secret_key_base: "xxUAB/U3HD+Ud+Xn9HKZsLfjW/4xEpYNQnEfIRzIISlidURDmJVFFGTAN0i9bF9g",
   server: true
 
+# Compiles the fixture features' gated routes (lib/lanternhall_web/router.ex).
+config :lanternhall, fixture_routes: true
+
 # Real-browser E2E tests: PhoenixTest driven through Playwright's Chromium,
 # installed under assets/node_modules by `pnpm --dir assets install`.
 config :phoenix_test,

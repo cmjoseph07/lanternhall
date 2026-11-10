@@ -166,6 +166,22 @@ defmodule Lanternhall.Platform.FeaturesTest do
     end
   end
 
+  describe "enabled?/1" do
+    test "is true for a feature in the enabled set stored at boot" do
+      assert Features.enabled?(:fixture_core)
+    end
+
+    test "is false for a known feature the install leaves disabled" do
+      refute Features.enabled?(:fixture_personal)
+    end
+
+    test "raises for an id no feature has, so a mistyped route gate fails loudly" do
+      assert_raise ArgumentError, "no feature has id :fixture_typo", fn ->
+        Features.enabled?(:fixture_typo)
+      end
+    end
+  end
+
   describe "the composition root" do
     test "is the only place that names a feature module; compiled app code never does" do
       features = Features.all()
