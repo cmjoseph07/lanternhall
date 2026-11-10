@@ -59,6 +59,29 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate(@registry) == :ok
     end
 
+    test "refuses callbacks that return the wrong shape, without crashing" do
+      assert Features.validate([Core, Invalid.BadShapes]) ==
+               {:error,
+                [
+                  {:features,
+                   ~s(has Lanternhall.Fixtures.Features.Invalid.BadShapes.id/0 return "fixture_bad_shapes"; it must be an atom)},
+                  {:features,
+                   "has Lanternhall.Fixtures.Features.Invalid.BadShapes.kind/0 return :home; it must be :core, :personal or :work"},
+                  {:features,
+                   "has Lanternhall.Fixtures.Features.Invalid.BadShapes.depends_on/0 return :fixture_core; it must be a list of feature ids"},
+                  {:features,
+                   "has Lanternhall.Fixtures.Features.Invalid.BadShapes.config_keys/0 return [fixture_bad: :not_a_function]; it must be a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"}
+                ]}
+    end
+
+    test "refuses improper lists from depends_on/0 and config_keys/0" do
+      assert {:error, [{:features, depends_on}, {:features, config_keys}]} =
+               Features.validate([Invalid.ImproperLists])
+
+      assert depends_on =~ "depends_on/0 return [:fixture_core | :tail]; it must be a list"
+      assert config_keys =~ "config_keys/0 return [{:fixture_x, &Function.identity/1} | :tail]"
+    end
+
     test "refuses a module that does not implement the behaviour" do
       assert Features.validate([PlatformFeature, String, :no_such_module]) ==
                {:error,

@@ -19,23 +19,20 @@ defmodule Lanternhall.Platform.Features do
   def all, do: Application.fetch_env!(:lanternhall, :features)
 
   @doc """
-  Checks the registry itself: each entry implements the behaviour, ids are unique,
-  dependencies exist, are `:core` or of the dependent's kind and form no cycle, and no two
-  owners claim the same install config key.
+  Checks the registry itself: each entry implements the behaviour and its callbacks
+  return the shapes the behaviour names, ids are unique, dependencies exist, are `:core`
+  or of the dependent's kind and form no cycle, and no two owners claim the same install
+  config key.
   """
   @spec validate([module()]) :: :ok | {:error, [Config.error()]}
   def validate(features) do
     problems =
-      case Enum.reject(features, &feature?/1) do
-        [] ->
-          by_id = Map.new(features, &{&1.id(), &1})
+      with [] <- not_features(features),
+           [] <- Enum.flat_map(features, &shape_problems/1) do
+        by_id = Map.new(features, &{&1.id(), &1})
 
-          duplicate_ids(features) ++
-            dependency_problems(features, by_id) ++ cycle(features) ++ key_clashes(features)
-
-        not_features ->
-          for module <- not_features,
-              do: "lists #{inspect(module)}, which does not implement #{inspect(Feature)}"
+        duplicate_ids(features) ++
+          dependency_problems(features, by_id) ++ cycle(features) ++ key_clashes(features)
       end
 
     case problems do
@@ -100,6 +97,45 @@ defmodule Lanternhall.Platform.Features do
       }
     end
   end
+
+  defp not_features(features) do
+    for module <- features,
+        not feature?(module),
+        do: "lists #{inspect(module)}, which does not implement #{inspect(Feature)}"
+  end
+
+  # What each callback must return, as worded in the error.
+  @shapes [
+    id: "an atom",
+    kind: ":core, :personal or :work",
+    depends_on: "a list of feature ids",
+    config_keys:
+      "a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"
+  ]
+
+  defp shape_problems(feature) do
+    Enum.flat_map(@shapes, fn {callback, expected} ->
+      value = apply(feature, callback, [])
+
+      if valid_shape?(callback, value),
+        do: [],
+        else: [
+          "has #{inspect(feature)}.#{callback}/0 return #{inspect(value)}; it must be #{expected}"
+        ]
+    end)
+  end
+
+  defp valid_shape?(:id, id), do: is_atom(id)
+  defp valid_shape?(:kind, kind), do: kind in [:core, :personal, :work]
+  defp valid_shape?(:depends_on, ids), do: list_of?(ids, &is_atom/1)
+
+  defp valid_shape?(:config_keys, keys), do: list_of?(keys, &config_key?/1)
+
+  defp config_key?({key, validator}), do: is_atom(key) and is_function(validator, 1)
+  defp config_key?(_entry), do: false
+
+  defp list_of?(value, valid?),
+    do: is_list(value) and not List.improper?(value) and Enum.all?(value, valid?)
 
   # Each `@behaviour` line is stored as its own `behaviour: [module]` attribute.
   defp feature?(module) do
