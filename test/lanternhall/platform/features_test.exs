@@ -68,12 +68,20 @@ defmodule Lanternhall.Platform.FeaturesTest do
                 ]}
     end
 
+    # The cycle sits after features with no cycle, as in a real registry, which always
+    # starts with PlatformFeature.
     test "refuses a dependency cycle, naming the path" do
-      assert Features.validate([Invalid.CycleA, Invalid.CycleB]) ==
+      assert Features.validate([
+               PlatformFeature,
+               Core,
+               Invalid.CycleA,
+               Invalid.CycleB,
+               Invalid.CycleC
+             ]) ==
                {:error,
                 [
                   {:features,
-                   "has a dependency cycle: :fixture_cycle_a -> :fixture_cycle_b -> :fixture_cycle_a"}
+                   "has a dependency cycle: :fixture_cycle_a -> :fixture_cycle_b -> :fixture_cycle_c -> :fixture_cycle_a"}
                 ]}
     end
 

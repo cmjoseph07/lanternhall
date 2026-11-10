@@ -1,6 +1,7 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.CycleB do
   @moduledoc """
-  Broken registry fixture: depends on `:fixture_cycle_a`, which depends back on it.
+  Broken registry fixture: the middle of the `:fixture_cycle_a` -> `:fixture_cycle_b` ->
+  `:fixture_cycle_c` -> `:fixture_cycle_a` cycle.
   """
   @behaviour Lanternhall.Platform.Feature
 
@@ -11,7 +12,7 @@ defmodule Lanternhall.Fixtures.Features.Invalid.CycleB do
   def kind, do: :core
 
   @impl true
-  def depends_on, do: [:fixture_cycle_a]
+  def depends_on, do: [:fixture_cycle_c]
 
   @impl true
   def config_keys, do: []
