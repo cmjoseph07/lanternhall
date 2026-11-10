@@ -9,7 +9,7 @@ defmodule LanternhallWeb.Endpoint do
   # Set :encryption_salt if you would also like to encrypt it.
   @session_options [
     store: :cookie,
-    key: "_lanternhall_key",
+    key: Application.compile_env!(:lanternhall, :session_cookie),
     signing_salt: "in+/Bvct",
     same_site: "Lax"
   ]

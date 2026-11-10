@@ -49,6 +49,11 @@ config :lanternhall, LanternhallWeb.Endpoint,
   pubsub_server: Lanternhall.PubSub,
   live_view: [signing_salt: "B/c52piV"]
 
+# Browsers send a host's cookies to every port on it, so dev, test and prod on one
+# machine each need their own session cookie, or they overwrite each other's session
+# and CSRF token.
+config :lanternhall, :session_cookie, "_lanternhall_#{config_env()}"
+
 # Configure LiveView
 config :phoenix_live_view,
   # the attribute set on all root tags. Used for Phoenix.LiveView.ColocatedCSS.

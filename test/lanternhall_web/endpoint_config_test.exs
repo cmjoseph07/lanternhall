@@ -48,6 +48,18 @@ defmodule LanternhallWeb.EndpointConfigTest do
     end
   end
 
+  # Browsers send a host's cookies to every port on it, so envs sharing a cookie name on
+  # one machine would overwrite each other's session and CSRF token.
+  test "dev, test and prod each name their session cookie differently", %{install: install} do
+    names =
+      for env <- [:dev, :test, :prod] do
+        runtime_config(env, %{"LANTERNHALL_CONFIG" => install})[:lanternhall][:session_cookie]
+      end
+
+    assert Enum.all?(names, &is_binary/1)
+    assert names == Enum.uniq(names)
+  end
+
   describe "install config" do
     for env <- [:dev, :test] do
       test "#{env} defaults to the synthetic personal example" do

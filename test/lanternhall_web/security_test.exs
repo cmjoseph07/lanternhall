@@ -51,6 +51,19 @@ defmodule LanternhallWeb.SecurityTest do
     end
   end
 
+  describe "the session cookie" do
+    test "is named for this env, so other envs on the machine leave it alone" do
+      response =
+        RawHTTP.request("GET /fixtures/core HTTP/1.1", [
+          {"host", "localhost:4002"},
+          {"accept", "text/html"}
+        ])
+
+      assert response.status == 200
+      assert response.headers["set-cookie"] =~ ~r/^_lanternhall_test=/
+    end
+  end
+
   describe "a POST through the :browser pipeline" do
     # No browser route takes a POST yet, so these tests run the pipeline that every
     # browser route goes through. Phoenix.ConnTest skips CSRF checks unless told not to.
