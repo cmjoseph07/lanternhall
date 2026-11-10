@@ -144,6 +144,13 @@ jobs:
       - name: Install Chromium
         run: pnpm --dir assets exec playwright install --with-deps chromium
 
+      # The committed favicon and PWA icons must be exactly what the generator renders from
+      # logo-mark.svg (its output is byte-stable on macOS and Linux).
+      - name: Icons match the generator
+        run: |
+          pnpm --dir assets run icons
+          git diff --exit-code --stat -- priv/static/images
+
       - name: Build assets
         run: |
           mix assets.setup
