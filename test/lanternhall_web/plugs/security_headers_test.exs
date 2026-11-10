@@ -80,12 +80,15 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       %{opts: SecurityHeaders.init(dev_tools: true)}
     end
 
-    test "pages also allow the same-origin live-reload frame", %{conn: conn, opts: opts} do
-      conn = conn |> SecurityHeaders.call(opts) |> send_resp(200, "")
+    # 399 is the highest status below an error, so it pins the boundary.
+    for status <- [200, 302, 399] do
+      test "a #{status} page also allows the live-reload frame", %{conn: conn, opts: opts} do
+        conn = conn |> SecurityHeaders.call(opts) |> send_resp(unquote(status), "")
 
-      [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ ~r/; frame-ancestors 'none'; frame-src 'self'\z/
-      assert String.replace(csp, "; frame-src 'self'", "") =~ @csp
+        [csp] = get_resp_header(conn, "content-security-policy")
+        assert csp =~ ~r/; frame-ancestors 'none'; frame-src 'self'\z/
+        assert String.replace(csp, "; frame-src 'self'", "") =~ @csp
+      end
     end
 
     for path <- ["/phoenix/live_reload/frame", "/dev/dashboard/home"] do
@@ -97,11 +100,14 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       end
     end
 
-    test "error pages drop the CSP so the debugger can render", %{conn: conn, opts: opts} do
-      conn = conn |> SecurityHeaders.call(opts) |> send_resp(404, "")
+    # 400 is the lowest error status, so it pins the boundary.
+    for status <- [400, 404, 500] do
+      test "a #{status} error page drops the CSP for the debugger", %{conn: conn, opts: opts} do
+        conn = conn |> SecurityHeaders.call(opts) |> send_resp(unquote(status), "")
 
-      assert get_resp_header(conn, "content-security-policy") == []
-      assert_other_headers(conn)
+        assert get_resp_header(conn, "content-security-policy") == []
+        assert_other_headers(conn)
+      end
     end
   end
 
