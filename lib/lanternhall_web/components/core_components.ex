@@ -76,7 +76,7 @@ defmodule LanternhallWeb.CoreComponents do
         </div>
         <div class="flex-1" />
         <button type="button" class="group self-start cursor-pointer" aria-label="close">
-          <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
+          <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
         </button>
       </div>
     </div>

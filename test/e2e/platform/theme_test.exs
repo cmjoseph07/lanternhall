@@ -165,6 +165,72 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  # WCAG 2.2 AA as the page renders, once running animations (such as a flash fading
+  # in) finish: each background behind an element is painted at its node's opacity
+  # (its own times its ancestors'), then the element's color at its full opacity, and
+  # both are read back as sRGB. Icons are masks filled with `background-color`, so
+  # that is their color. Each entry is [selector, minimum ratio]: 4.5:1 for text
+  # (1.4.3), 3:1 for icons (1.4.11).
+  @paint_rendered """
+  (async (entries) => {
+    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+    const canvas = Object.assign(document.createElement("canvas"), { width: 1, height: 1 });
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const paint = (color, alpha) => {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#010203";
+      ctx.fillStyle = color;
+      if (ctx.fillStyle === "#010203") throw new Error(`canvas cannot parse ${color}`);
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(0, 0, 1, 1);
+      return [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    };
+    return entries.map(([selector, minimum]) => {
+      const el = document.querySelector(selector);
+      if (!el) throw new Error(`nothing matches ${selector}`);
+      const icon = [...el.classList].some((c) => c.startsWith("hero-"));
+      const chain = [];
+      for (let node = el; node; node = node.parentElement) chain.unshift(node);
+      ctx.clearRect(0, 0, 1, 1);
+      let bg = paint("#ffffff", 1);
+      let opacity = 1;
+      for (const node of chain) {
+        const style = getComputedStyle(node);
+        opacity *= Number(style.opacity);
+        if (node !== el || !icon) bg = paint(style.backgroundColor, opacity);
+      }
+      const style = getComputedStyle(el);
+      const fg = paint(icon ? style.backgroundColor : style.color, opacity);
+      return { selector, minimum, bg, fg };
+    });
+  })
+  """
+
+  @flash_parts (for kind <- ~w(info error),
+                    {part, minimum} <- [
+                      {"p", 4.5},
+                      {"[class*=hero-]:not(button *)", 3},
+                      {"button [class*=hero-]", 3}
+                    ] do
+                  ["#flash-#{kind} #{part}", minimum]
+                end)
+
+  test "flash text and icons meet WCAG 2.2 AA contrast in both themes", %{conn: conn} do
+    conn
+    |> visit(~p"/fixtures/core?flashes")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> assert_has("html[data-theme=#{@dark}]")
+    |> assert_rendered_contrast(@flash_parts)
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("light")
+    |> visit(~p"/fixtures/core?flashes")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> assert_has("html[data-theme=#{@light}]")
+    |> assert_rendered_contrast(@flash_parts)
+    |> assert_clean_browser()
+  end
+
   test "the logo is inline and its wordmark follows the theme's text color", %{conn: conn} do
     wordmark_and_text =
       ~s|[getComputedStyle(document.querySelector('#landing-logo svg g[fill="currentColor"]')).fill, | <>
@@ -233,6 +299,19 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> Playwright.evaluate("window.__themeLog", fn log -> assert log == [theme] end)
     |> Playwright.evaluate("window.__firstFrame", fn frame ->
       assert frame == %{"theme" => theme, "background" => @background[theme]}
+    end)
+  end
+
+  defp assert_rendered_contrast(conn, entries) do
+    Playwright.evaluate(conn, "#{@paint_rendered}(#{JSON.encode!(entries)})", fn measured ->
+      failures =
+        for %{"selector" => selector, "minimum" => minimum, "bg" => bg, "fg" => fg} <- measured,
+            ratio = contrast(fg, bg),
+            ratio < minimum,
+            do: "#{selector} is #{Float.round(ratio, 2)}:1, needs #{minimum}:1"
+
+      assert length(measured) == length(entries)
+      assert failures == []
     end)
   end
 
