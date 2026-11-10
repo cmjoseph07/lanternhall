@@ -7,6 +7,11 @@ defmodule LanternhallWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  #
+  # SameSite=Lax, not Strict: the session holds only the CSRF token, and Lax already
+  # withholds it from cross-site POSTs and subrequests. Strict would also drop it when a
+  # link on another site (mail, chat, calendar) opens the app, which starts a new session
+  # and breaks the CSRF token of every tab already open.
   @session_options [
     store: :cookie,
     key: Application.compile_env!(:lanternhall, :session_cookie),

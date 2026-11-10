@@ -52,7 +52,7 @@ defmodule LanternhallWeb.SecurityTest do
   end
 
   describe "the session cookie" do
-    test "is named for this env, so other envs on the machine leave it alone" do
+    setup do
       response =
         RawHTTP.request("GET /fixtures/core HTTP/1.1", [
           {"host", "localhost:4002"},
@@ -60,7 +60,17 @@ defmodule LanternhallWeb.SecurityTest do
         ])
 
       assert response.status == 200
-      assert response.headers["set-cookie"] =~ ~r/^_lanternhall_test=/
+      {:ok, cookie: response.headers["set-cookie"]}
+    end
+
+    test "is named for this env, so other envs on the machine leave it alone", %{cookie: cookie} do
+      assert cookie =~ ~r/^_lanternhall_test=/
+    end
+
+    # Strict would drop the cookie when a link on another site opens the app, which
+    # starts a new session and breaks the CSRF token of every tab already open.
+    test "is SameSite=Lax, not Strict", %{cookie: cookie} do
+      assert cookie =~ ~r/; SameSite=Lax(;|$)/
     end
   end
 
