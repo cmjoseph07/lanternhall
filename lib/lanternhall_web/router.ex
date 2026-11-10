@@ -35,8 +35,10 @@ defmodule LanternhallWeb.Router do
   # *before* `:browser`, so a disabled feature's URL answers 404 before format negotiation
   # or the CSRF check can answer 406 or 403. Its LiveViews sit in their own `live_session`
   # gated by `LanternhallWeb.FeatureGate`, which covers connected mounts, as those never
-  # pass through the router's pipelines. Test compiles these routes for the fixture
-  # features in test/support/fixtures/features/; dev and prod never do.
+  # pass through the router's pipelines. test/lanternhall_web/router_test.exs checks
+  # every route's gates, so a gate id that names no feature fails the suite, not a
+  # request. Test compiles these routes for the fixture features in
+  # test/support/fixtures/features/; dev and prod never do.
   if Application.compile_env(:lanternhall, :fixture_routes, false) do
     pipeline :fixture_core_gate do
       plug LanternhallWeb.Plugs.FeatureGate, :fixture_core
