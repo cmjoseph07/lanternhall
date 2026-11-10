@@ -1,6 +1,6 @@
 defmodule LanternhallWeb.SecurityTest do
   # Origin and CSRF checks (SPEC-platform.md section 3.3).
-  use LanternhallWeb.ConnCase, async: true
+  use ExUnit.Case, async: true
 
   # Phoenix logs every refused Origin; keep the expected noise out of the test output.
   @moduletag :capture_log
@@ -74,35 +74,55 @@ defmodule LanternhallWeb.SecurityTest do
     end
   end
 
-  describe "a POST through the :browser pipeline" do
-    # No browser route takes a POST yet, so these tests run the pipeline that every
-    # browser route goes through. Phoenix.ConnTest skips CSRF checks unless told not to.
-    test "without a CSRF token is refused with 403" do
-      # Pipeline plugs wrap what they raise; the endpoint unwraps it into the response.
-      %Plug.Conn.WrapperError{reason: error} =
-        assert_raise Plug.Conn.WrapperError, fn ->
-          :post
-          |> build_conn("/", %{})
-          |> init_test_session(%{})
-          |> put_private(:plug_skip_csrf_protection, false)
-          |> LanternhallWeb.Router.browser([])
-        end
+  describe "a form POST through the :browser pipeline" do
+    # Real requests to the fixture route POST /fixtures/core/plain, which pipes through
+    # :browser like every browser route, carrying what a browser holds after loading a
+    # page: the session cookie and the page's CSRF token.
+    setup do
+      page =
+        RawHTTP.request("GET /fixtures/core HTTP/1.1", [
+          {"host", "localhost:4002"},
+          {"accept", "text/html"}
+        ])
 
-      assert %Plug.CSRFProtection.InvalidCSRFTokenError{} = error
-      assert Plug.Exception.status(error) == 403
+      [cookie | _attributes] = String.split(page.headers["set-cookie"], ";")
+
+      [token] =
+        page.body
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("meta[name=csrf-token]")
+        |> LazyHTML.attribute("content")
+
+      {:ok, cookie: cookie, token: token}
     end
 
-    test "with a valid CSRF token passes" do
-      token = Plug.CSRFProtection.get_csrf_token()
+    defp post_plain(headers, body) do
+      RawHTTP.request(
+        "POST /fixtures/core/plain HTTP/1.1",
+        [
+          {"host", "localhost:4002"},
+          {"accept", "text/html"},
+          {"content-type", "application/x-www-form-urlencoded"},
+          {"content-length", Integer.to_string(byte_size(body))} | headers
+        ],
+        body
+      )
+    end
 
-      conn =
-        :post
-        |> build_conn("/", %{"_csrf_token" => token})
-        |> init_test_session(%{"_csrf_token" => Plug.CSRFProtection.dump_state()})
-        |> put_private(:plug_skip_csrf_protection, false)
-        |> LanternhallWeb.Router.browser([])
+    test "with the page's token and session cookie is let through", ctx do
+      body = URI.encode_query(%{"_csrf_token" => ctx.token})
+      response = post_plain([{"cookie", ctx.cookie}], body)
 
-      refute conn.halted
+      assert response.status == 200
+      assert response.body == "fixture_core plain post"
+    end
+
+    test "without a token is refused with 403", %{cookie: cookie} do
+      assert post_plain([{"cookie", cookie}], "").status == 403
+    end
+
+    test "with a token but no session cookie is refused with 403", %{token: token} do
+      assert post_plain([], URI.encode_query(%{"_csrf_token" => token})).status == 403
     end
   end
 end

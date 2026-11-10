@@ -9,13 +9,14 @@ defmodule LanternhallWeb.RawHTTP do
   @timeout 5_000
 
   @doc """
-  Sends `request_line` (for example `"GET / HTTP/1.1"`) with `headers` and returns
-  the response status, headers (names lowercased) and body.
+  Sends `request_line` (for example `"GET / HTTP/1.1"`) with `headers` and `body`, and
+  returns the response status, headers (names lowercased) and body. The caller sets any
+  `content-length` the body needs.
 
   A `101 Switching Protocols` reply is returned without reading further, so a
   successful WebSocket upgrade does not block the test.
   """
-  def request(request_line, headers) do
+  def request(request_line, headers, body \\ "") do
     {:ok, socket} =
       :gen_tcp.connect({127, 0, 0, 1}, LanternhallWeb.Endpoint.config(:http)[:port], [
         :binary,
@@ -25,7 +26,7 @@ defmodule LanternhallWeb.RawHTTP do
 
     try do
       head = [request_line, "\r\n", Enum.map(headers, fn {k, v} -> [k, ": ", v, "\r\n"] end)]
-      :ok = :gen_tcp.send(socket, [head, "\r\n"])
+      :ok = :gen_tcp.send(socket, [head, "\r\n", body])
 
       {:ok, {:http_response, _version, status, _reason}} = :gen_tcp.recv(socket, 0, @timeout)
       resp_headers = recv_headers(socket, %{})
