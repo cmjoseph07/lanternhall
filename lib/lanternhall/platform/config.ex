@@ -10,8 +10,9 @@ defmodule Lanternhall.Platform.Config do
   stops boot with one line per problem. `Lanternhall.Application` then stores it once
   in `:persistent_term`, and the rest of the app reads it through `get/0`.
 
-  Problems are data until that single raise: `check/3` returns `{:error, [{key, reason}]}`,
-  where `key` is the config key, or the file path for problems with the file itself.
+  Problems are data until that single raise: `path/1` and `check/3` return
+  `{:error, [{key, reason}]}`, where `key` is the config key, the environment variable
+  to set, or the file path for problems with the file itself.
   """
 
   alias Lanternhall.Platform.Features
@@ -30,7 +31,7 @@ defmodule Lanternhall.Platform.Config do
           features: [module()],
           feature_config: %{optional(atom()) => term()}
         }
-  @type error :: {atom() | Path.t(), String.t()}
+  @type error :: {atom() | String.t(), String.t()}
   @type env :: %{optional(String.t()) => String.t()}
 
   @required [:kind, :port, :modules, :time_zone]
@@ -41,17 +42,21 @@ defmodule Lanternhall.Platform.Config do
   The config file path: `LANTERNHALL_CONFIG`, else `$XDG_CONFIG_HOME/lanternhall/config.exs`,
   else `~/.config/lanternhall/config.exs`. Empty or relative XDG variables are ignored.
   """
-  @spec path(env()) :: Path.t()
+  @spec path(env()) :: {:ok, Path.t()} | {:error, [error()]}
   def path(env) do
     cond do
       present?(env["LANTERNHALL_CONFIG"]) ->
-        Path.expand(env["LANTERNHALL_CONFIG"])
+        {:ok, Path.expand(env["LANTERNHALL_CONFIG"])}
 
       absolute?(env["XDG_CONFIG_HOME"]) ->
-        Path.join([env["XDG_CONFIG_HOME"], "lanternhall", "config.exs"])
+        {:ok, Path.join([env["XDG_CONFIG_HOME"], "lanternhall", "config.exs"])}
+
+      present?(env["HOME"]) ->
+        {:ok, Path.join([env["HOME"], ".config", "lanternhall", "config.exs"])}
 
       true ->
-        Path.join([Map.fetch!(env, "HOME"), ".config", "lanternhall", "config.exs"])
+        {:error,
+         [{"LANTERNHALL_CONFIG", "is required because neither XDG_CONFIG_HOME nor HOME is set"}]}
     end
   end
 
@@ -72,11 +77,16 @@ defmodule Lanternhall.Platform.Config do
     end
   end
 
-  @doc "Like `check/3`, but raises once with one line per problem."
-  @spec load!(Path.t(), env(), [module()]) :: t()
-  def load!(path, env, features) do
-    case check(path, env, features) do
-      {:ok, config} -> config
+  @doc """
+  Boot's entry point: finds the file through `path/1`, then runs `check/3`, raising once
+  with one line per problem.
+  """
+  @spec load!(env(), [module()]) :: t()
+  def load!(env, features) do
+    with {:ok, path} <- path(env),
+         {:ok, config} <- check(path, env, features) do
+      config
+    else
       {:error, errors} -> raise format_errors(errors)
     end
   end
@@ -86,7 +96,7 @@ defmodule Lanternhall.Platform.Config do
   def format_errors(errors) do
     Enum.map_join(errors, "\n", fn
       {key, reason} when is_atom(key) -> "lanternhall config: #{inspect(key)} #{reason}"
-      {path, reason} -> "lanternhall config: #{path} #{reason}"
+      {name, reason} -> "lanternhall config: #{name} #{reason}"
     end)
   end
 

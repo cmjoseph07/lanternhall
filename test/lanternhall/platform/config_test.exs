@@ -339,20 +339,31 @@ defmodule Lanternhall.Platform.ConfigTest do
   describe "path/1" do
     test "LANTERNHALL_CONFIG wins, expanded to an absolute path" do
       env = Map.merge(@home, %{"LANTERNHALL_CONFIG" => "/etc/lh.exs", "XDG_CONFIG_HOME" => "/x"})
-      assert Config.path(env) == "/etc/lh.exs"
+      assert Config.path(env) == {:ok, "/etc/lh.exs"}
 
       assert Config.path(%{"LANTERNHALL_CONFIG" => "lh.exs"}) ==
-               Path.join(File.cwd!(), "lh.exs")
+               {:ok, Path.join(File.cwd!(), "lh.exs")}
     end
 
     test "then an absolute XDG_CONFIG_HOME" do
       env = Map.put(@home, "XDG_CONFIG_HOME", "/xdg/config")
-      assert Config.path(env) == "/xdg/config/lanternhall/config.exs"
+      assert Config.path(env) == {:ok, "/xdg/config/lanternhall/config.exs"}
     end
 
     test "then ~/.config, ignoring empty or relative variables" do
       env = Map.merge(@home, %{"LANTERNHALL_CONFIG" => "", "XDG_CONFIG_HOME" => "rel"})
-      assert Config.path(env) == "/home/someone/.config/lanternhall/config.exs"
+      assert Config.path(env) == {:ok, "/home/someone/.config/lanternhall/config.exs"}
+    end
+
+    test "has no default without HOME" do
+      for env <- [%{}, %{"HOME" => "", "XDG_CONFIG_HOME" => "rel"}] do
+        assert Config.path(env) ==
+                 {:error,
+                  [
+                    {"LANTERNHALL_CONFIG",
+                     "is required because neither XDG_CONFIG_HOME nor HOME is set"}
+                  ]}
+      end
     end
   end
 
@@ -368,21 +379,32 @@ defmodule Lanternhall.Platform.ConfigTest do
     end
   end
 
-  describe "load!/3" do
-    test "returns the config when the file is valid", %{tmp_dir: tmp_dir} do
+  describe "load!/2" do
+    test "returns the config at the path the env names", %{tmp_dir: tmp_dir} do
       path = write_install(tmp_dir, valid_install())
-      assert %Config{path: ^path, kind: :personal} = Config.load!(path, @home, @features)
+      env = Map.put(@home, "LANTERNHALL_CONFIG", path)
+
+      assert %Config{path: ^path, kind: :personal} = Config.load!(env, @features)
     end
 
     test "raises once with one line per problem", %{tmp_dir: tmp_dir} do
       path = write_install(tmp_dir, kind: :home, port: 1, modules: [], time_zone: "UTC")
+      env = Map.put(@home, "LANTERNHALL_CONFIG", path)
 
-      error = assert_raise RuntimeError, fn -> Config.load!(path, @home, @features) end
+      error = assert_raise RuntimeError, fn -> Config.load!(env, @features) end
 
       assert Exception.message(error) == """
              lanternhall config: :kind must be :personal or :work, got :home
              lanternhall config: :port must be an integer from 1024 to 65535, got 1\
              """
+    end
+
+    test "raises one line, without the env, when no path can be found" do
+      error =
+        assert_raise RuntimeError, fn -> Config.load!(%{"SECRET" => "s3cr3t"}, @features) end
+
+      assert Exception.message(error) ==
+               "lanternhall config: LANTERNHALL_CONFIG is required because neither XDG_CONFIG_HOME nor HOME is set"
     end
   end
 

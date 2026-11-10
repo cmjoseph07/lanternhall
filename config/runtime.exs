@@ -30,12 +30,7 @@ install_env =
     System.get_env()
   end
 
-install =
-  Lanternhall.Platform.Config.load!(
-    Lanternhall.Platform.Config.path(install_env),
-    install_env,
-    Lanternhall.Platform.Features.all()
-  )
+install = Lanternhall.Platform.Config.load!(install_env, Lanternhall.Platform.Features.all())
 
 config :lanternhall, :install, install
 
