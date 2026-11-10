@@ -3,15 +3,20 @@ defmodule Lanternhall.Platform.Config do
   The install config: one Elixir file per install that names its kind, port, modules,
   time zone and data directory (SPEC-platform.md section 3.1).
 
+  Features add keys of their own and are enabled through `modules`, so the file is
+  checked against the feature registry (`Lanternhall.Platform.Features`) too.
+
   `config/runtime.exs` loads and validates it before any app starts, so a bad value
   stops boot with one line per problem. `Lanternhall.Application` then stores it once
   in `:persistent_term`, and the rest of the app reads it through `get/0`.
 
-  Problems are data until that single raise: `check/2` returns `{:error, [{key, reason}]}`,
+  Problems are data until that single raise: `check/3` returns `{:error, [{key, reason}]}`,
   where `key` is the config key, or the file path for problems with the file itself.
   """
 
-  @enforce_keys [:path, :kind, :port, :modules, :time_zone, :data_dir]
+  alias Lanternhall.Platform.Features
+
+  @enforce_keys [:path, :kind, :port, :modules, :time_zone, :data_dir, :features, :feature_config]
   defstruct @enforce_keys
 
   @type kind :: :personal | :work
@@ -21,7 +26,9 @@ defmodule Lanternhall.Platform.Config do
           port: 1024..65_535,
           modules: [atom()],
           time_zone: String.t(),
-          data_dir: Path.t()
+          data_dir: Path.t(),
+          features: [module()],
+          feature_config: %{optional(atom()) => term()}
         }
   @type error :: {atom() | Path.t(), String.t()}
   @type env :: %{optional(String.t()) => String.t()}
@@ -50,20 +57,25 @@ defmodule Lanternhall.Platform.Config do
 
   @doc """
   Reads and validates the config file at `path` without starting anything.
-  `env` supplies `HOME` and `XDG_DATA_HOME` for the default `data_dir`.
+  `env` supplies `HOME` and `XDG_DATA_HOME` for the default `data_dir`; `features` is the
+  registry (`Lanternhall.Platform.Features.all/0`), checked first.
+
+  The result holds the enabled features in `features` and the values of their keys,
+  as their validators returned them, in `feature_config`.
   """
-  @spec check(Path.t(), env()) :: {:ok, t()} | {:error, [error()]}
-  def check(path, env) do
-    with {:ok, install} <- read(path),
-         {:ok, fields} <- validate(install, env) do
+  @spec check(Path.t(), env(), [module()]) :: {:ok, t()} | {:error, [error()]}
+  def check(path, env, features) do
+    with :ok <- Features.validate(features),
+         {:ok, install} <- read(path),
+         {:ok, fields} <- validate(install, env, features) do
       {:ok, struct!(__MODULE__, Map.put(fields, :path, path))}
     end
   end
 
-  @doc "Like `check/2`, but raises once with one line per problem."
-  @spec load!(Path.t(), env()) :: t()
-  def load!(path, env) do
-    case check(path, env) do
+  @doc "Like `check/3`, but raises once with one line per problem."
+  @spec load!(Path.t(), env(), [module()]) :: t()
+  def load!(path, env, features) do
+    case check(path, env, features) do
       {:ok, config} -> config
       {:error, errors} -> raise format_errors(errors)
     end
@@ -77,6 +89,10 @@ defmodule Lanternhall.Platform.Config do
       {path, reason} -> "lanternhall config: #{path} #{reason}"
     end)
   end
+
+  @doc "The keys platform owns; features may not claim them."
+  @spec platform_keys() :: [atom()]
+  def platform_keys, do: @known
 
   @doc "Stores the validated config for the life of the node. Called once at boot."
   @spec put(t()) :: :ok
@@ -138,28 +154,73 @@ defmodule Lanternhall.Platform.Config do
     end
   end
 
-  defp validate(install, env) do
+  defp validate(install, env, features) do
     if Keyword.keyword?(install) do
-      validate_keys(install, env)
+      validate_keys(install, env, features)
     else
       {:error, [{:install, "must be a keyword list, got #{inspect(install)}"}]}
     end
   end
 
-  defp validate_keys(install, env) do
-    results = Enum.map(@known, &{&1, validate_key(&1, Keyword.get_values(install, &1), env)})
+  # Platform keys first. Feature keys are checked only once kind and modules give a valid
+  # enabled set, because which keys exist depends on it.
+  defp validate_keys(install, env, features) do
+    platform = Enum.map(@known, &{&1, validate_key(&1, Keyword.get_values(install, &1), env)})
+    fields = for {key, {:ok, value}} <- platform, into: %{}, do: {key, value}
+    {enabled, module_errors} = enabled_features(fields, features)
+
+    feature_keys =
+      for feature <- enabled || [], {key, validator} <- feature.config_keys() do
+        {key, validate_feature_key(validator, Keyword.get_values(install, key))}
+      end
 
     errors =
-      for({key, {:error, reason}} <- results, do: {key, reason}) ++
-        for {key, _} <- Enum.uniq_by(install, &elem(&1, 0)), key not in @known do
-          {key, "is not a known key"}
-        end
+      errors(platform) ++
+        module_errors ++ errors(feature_keys) ++ unknown_keys(install, enabled, features)
 
     case errors do
-      [] -> {:ok, Map.new(results, fn {key, {:ok, value}} -> {key, value} end)}
-      errors -> {:error, errors}
+      [] ->
+        feature_config = Map.new(feature_keys, fn {key, {:ok, value}} -> {key, value} end)
+        {:ok, Map.merge(fields, %{features: enabled, feature_config: feature_config})}
+
+      errors ->
+        {:error, errors}
     end
   end
+
+  defp errors(results), do: for({key, {:error, reason}} <- results, do: {key, reason})
+
+  defp enabled_features(%{kind: kind, modules: modules}, features) do
+    case Features.resolve(features, kind, modules) do
+      {:ok, enabled} -> {enabled, []}
+      {:error, errors} -> {nil, errors}
+    end
+  end
+
+  defp enabled_features(_fields, _features), do: {nil, []}
+
+  # A key a feature owns is unknown only while that feature is disabled; with no valid
+  # enabled set yet, it cannot be judged.
+  defp unknown_keys(install, enabled, features) do
+    owners =
+      for feature <- features, {key, _} <- feature.config_keys(), into: %{}, do: {key, feature}
+
+    for {key, _} <- Enum.uniq_by(install, &elem(&1, 0)),
+        key not in @known,
+        reason = unknown_key(owners[key], enabled),
+        do: {key, reason}
+  end
+
+  defp unknown_key(nil, _enabled), do: "is not a known key"
+  defp unknown_key(_owner, nil), do: nil
+
+  defp unknown_key(owner, enabled) do
+    if owner not in enabled, do: "belongs to #{inspect(owner.id())}, which is not enabled"
+  end
+
+  defp validate_feature_key(_validator, [_, _ | _]), do: {:error, "is set more than once"}
+  defp validate_feature_key(validator, []), do: validator.(:error)
+  defp validate_feature_key(validator, [value]), do: validator.({:ok, value})
 
   defp validate_key(_key, [_, _ | _], _env), do: {:error, "is set more than once"}
   defp validate_key(:data_dir, [], env), do: default_data_dir(env)

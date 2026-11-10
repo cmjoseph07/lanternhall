@@ -49,12 +49,8 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
           <.fact id="install-config-path" label="Config file" mono>
             <.path value={@config.path} />
           </.fact>
-          <.fact id="install-modules" label="Modules">
-            <%= if @config.modules == [] do %>
-              <span class="text-base-content/70">None</span>
-            <% else %>
-              <span class="font-mono">{Enum.join(@config.modules, ", ")}</span>
-            <% end %>
+          <.fact id="install-modules" label="Modules" mono>
+            {Enum.map_join(@config.features, ", ", & &1.id())}
           </.fact>
         </dl>
       </section>

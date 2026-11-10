@@ -1,12 +1,14 @@
 defmodule Lanternhall.Platform.ConfigTest do
   use ExUnit.Case, async: true
 
-  alias Lanternhall.Platform.Config
+  alias Lanternhall.Fixtures.Features.{Core, Integration, Personal, Work}
+  alias Lanternhall.Platform.{Config, PlatformFeature}
 
   @moduletag :tmp_dir
 
   @home %{"HOME" => "/home/someone"}
   @examples_dir Path.expand("../../../config/install", __DIR__)
+  @features [PlatformFeature, Core, Personal, Work, Integration]
 
   defp write_config(tmp_dir, body) do
     path = Path.join(tmp_dir, "config.exs")
@@ -23,15 +25,15 @@ defmodule Lanternhall.Platform.ConfigTest do
   end
 
   defp errors_for(tmp_dir, install, env \\ @home) do
-    assert {:error, errors} = tmp_dir |> write_install(install) |> Config.check(env)
+    assert {:error, errors} = tmp_dir |> write_install(install) |> Config.check(env, @features)
     errors
   end
 
-  describe "check/2 with a valid file" do
+  describe "check/3 with a valid file" do
     test "returns the config with its path and every key", %{tmp_dir: tmp_dir} do
       path = write_install(tmp_dir, Keyword.put(valid_install(), :data_dir, "/srv/lanternhall"))
 
-      assert Config.check(path, @home) ==
+      assert Config.check(path, @home, @features) ==
                {:ok,
                 %Config{
                   path: path,
@@ -39,21 +41,36 @@ defmodule Lanternhall.Platform.ConfigTest do
                   port: 4100,
                   modules: [],
                   time_zone: "Europe/London",
-                  data_dir: "/srv/lanternhall"
+                  data_dir: "/srv/lanternhall",
+                  features: [PlatformFeature, Core],
+                  feature_config: %{fixture_level: 1}
                 }}
     end
 
     test "accepts a :work install with modules listed", %{tmp_dir: tmp_dir} do
-      install = Keyword.merge(valid_install(), kind: :work, modules: [:tickets, :people])
+      modules = [:fixture_integration, :fixture_work]
+      install = Keyword.merge(valid_install(), kind: :work, modules: modules)
 
-      assert {:ok, %Config{kind: :work, modules: [:tickets, :people]}} =
-               tmp_dir |> write_install(install) |> Config.check(@home)
+      assert {:ok, %Config{kind: :work, modules: ^modules, features: features}} =
+               tmp_dir |> write_install(install) |> Config.check(@home, @features)
+
+      assert features == [PlatformFeature, Core, Work, Integration]
+    end
+
+    test "passes each enabled feature's keys through its validator", %{tmp_dir: tmp_dir} do
+      install =
+        valid_install()
+        |> Keyword.put(:modules, [:fixture_personal])
+        |> Keyword.merge(fixture_level: 7, fixture_greeting: "hello")
+
+      assert {:ok, %Config{feature_config: %{fixture_level: 7, fixture_greeting: "hello"}}} =
+               tmp_dir |> write_install(install) |> Config.check(@home, @features)
     end
 
     test "accepts the lowest and highest allowed ports", %{tmp_dir: tmp_dir} do
       for port <- [1024, 65_535] do
         path = write_install(tmp_dir, Keyword.put(valid_install(), :port, port))
-        assert {:ok, %Config{port: ^port}} = Config.check(path, @home)
+        assert {:ok, %Config{port: ^port}} = Config.check(path, @home, @features)
       end
     end
 
@@ -61,14 +78,15 @@ defmodule Lanternhall.Platform.ConfigTest do
       path = write_install(tmp_dir, valid_install())
 
       assert {:ok, %Config{data_dir: "/home/someone/.local/share/lanternhall"}} =
-               Config.check(path, @home)
+               Config.check(path, @home, @features)
     end
 
     test "defaults data_dir under an absolute XDG_DATA_HOME", %{tmp_dir: tmp_dir} do
       path = write_install(tmp_dir, valid_install())
       env = Map.put(@home, "XDG_DATA_HOME", "/xdg/data")
 
-      assert {:ok, %Config{data_dir: "/xdg/data/lanternhall"}} = Config.check(path, env)
+      assert {:ok, %Config{data_dir: "/xdg/data/lanternhall"}} =
+               Config.check(path, env, @features)
     end
 
     test "ignores an empty or relative XDG_DATA_HOME, as the XDG spec says", %{tmp_dir: tmp_dir} do
@@ -78,25 +96,25 @@ defmodule Lanternhall.Platform.ConfigTest do
         env = Map.put(@home, "XDG_DATA_HOME", xdg)
 
         assert {:ok, %Config{data_dir: "/home/someone/.local/share/lanternhall"}} =
-                 Config.check(path, env)
+                 Config.check(path, env, @features)
       end
     end
   end
 
-  describe "check/2 with the shipped examples" do
+  describe "check/3 with the shipped examples" do
     for {file, kind} <- [{"personal.example.exs", :personal}, {"work.example.exs", :work}] do
       test "#{file} validates clean as a #{kind} install" do
         path = Path.join(@examples_dir, unquote(file))
-        assert {:ok, %Config{kind: unquote(kind)}} = Config.check(path, @home)
+        assert {:ok, %Config{kind: unquote(kind)}} = Config.check(path, @home, @features)
       end
     end
   end
 
-  describe "check/2 with a bad file" do
+  describe "check/3 with a bad file" do
     test "a missing file names the path", %{tmp_dir: tmp_dir} do
       path = Path.join(tmp_dir, "missing.exs")
 
-      assert Config.check(path, @home) ==
+      assert Config.check(path, @home, @features) ==
                {:error,
                 [
                   {path,
@@ -105,13 +123,14 @@ defmodule Lanternhall.Platform.ConfigTest do
     end
 
     test "a directory instead of a file names the path", %{tmp_dir: tmp_dir} do
-      assert {:error, [{^tmp_dir, "is not a regular file"}]} = Config.check(tmp_dir, @home)
+      assert {:error, [{^tmp_dir, "is not a regular file"}]} =
+               Config.check(tmp_dir, @home, @features)
     end
 
     test "a syntax error gives one line naming the path and the error", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "config :lanternhall, :install, kind:\n")
 
-      assert {:error, [{^path, reason}]} = Config.check(path, @home)
+      assert {:error, [{^path, reason}]} = Config.check(path, @home, @features)
       assert reason =~ ~r/^could not be read: .*syntax error: expression is incomplete$/
       refute reason =~ "\n"
     end
@@ -119,7 +138,7 @@ defmodule Lanternhall.Platform.ConfigTest do
     test "a file without the install block names :install", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "")
 
-      assert Config.check(path, @home) ==
+      assert Config.check(path, @home, @features) ==
                {:error,
                 [{:install, "is missing; the file must set config :lanternhall, :install"}]}
     end
@@ -131,7 +150,7 @@ defmodule Lanternhall.Platform.ConfigTest do
       config :logger, level: :debug
       """
 
-      assert tmp_dir |> write_config(body) |> Config.check(@home) ==
+      assert tmp_dir |> write_config(body) |> Config.check(@home, @features) ==
                {:error,
                 [
                   {:repo, "is not allowed; the file holds only config :lanternhall, :install"},
@@ -142,12 +161,12 @@ defmodule Lanternhall.Platform.ConfigTest do
     test "an install block that is not a keyword list names :install", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "config :lanternhall, :install, \"personal\"\n")
 
-      assert Config.check(path, @home) ==
+      assert Config.check(path, @home, @features) ==
                {:error, [{:install, "must be a keyword list, got \"personal\""}]}
     end
   end
 
-  describe "check/2 per key" do
+  describe "check/3 per key" do
     test "an unknown key is refused by name", %{tmp_dir: tmp_dir} do
       install = valid_install() ++ [modlues: [:habits]]
       assert errors_for(tmp_dir, install) == [{:modlues, "is not a known key"}]
@@ -241,6 +260,82 @@ defmodule Lanternhall.Platform.ConfigTest do
     end
   end
 
+  describe "check/3 with the feature registry" do
+    test "a module on the wrong kind of install is named with the install kind",
+         %{tmp_dir: tmp_dir} do
+      install = Keyword.put(valid_install(), :modules, [:fixture_work])
+
+      assert errors_for(tmp_dir, install) == [
+               {:modules, "contains :fixture_work, which is not allowed on a :personal install"}
+             ]
+    end
+
+    test "a module whose dependency is disabled is named with the dependency",
+         %{tmp_dir: tmp_dir} do
+      install = Keyword.merge(valid_install(), kind: :work, modules: [:fixture_work])
+
+      assert errors_for(tmp_dir, install) == [
+               {:modules,
+                "contains :fixture_work, which depends on :fixture_integration, which is not enabled"}
+             ]
+    end
+
+    test "an unknown module is named", %{tmp_dir: tmp_dir} do
+      install = Keyword.put(valid_install(), :modules, [:habits])
+
+      assert errors_for(tmp_dir, install) == [
+               {:modules, "contains :habits, which is not a known module"}
+             ]
+    end
+
+    test "an enabled feature's key is checked by that feature", %{tmp_dir: tmp_dir} do
+      install = Keyword.merge(valid_install(), fixture_level: 0)
+
+      assert errors_for(tmp_dir, install) == [
+               {:fixture_level, "must be a positive integer, got 0"}
+             ]
+    end
+
+    test "an enabled feature's required key is named when missing", %{tmp_dir: tmp_dir} do
+      install = Keyword.put(valid_install(), :modules, [:fixture_personal])
+
+      assert errors_for(tmp_dir, install) == [
+               {:fixture_greeting, "is required while :fixture_personal is enabled"}
+             ]
+    end
+
+    test "an enabled feature's key set twice is refused by name", %{tmp_dir: tmp_dir} do
+      install = valid_install() ++ [fixture_level: 2, fixture_level: 3]
+      assert errors_for(tmp_dir, install) == [{:fixture_level, "is set more than once"}]
+    end
+
+    test "a disabled feature's key is refused, naming the feature", %{tmp_dir: tmp_dir} do
+      install = valid_install() ++ [fixture_greeting: "hello"]
+
+      assert errors_for(tmp_dir, install) == [
+               {:fixture_greeting, "belongs to :fixture_personal, which is not enabled"}
+             ]
+    end
+
+    test "feature keys wait until kind and modules are valid", %{tmp_dir: tmp_dir} do
+      install = Keyword.put(valid_install(), :kind, :home) ++ [fixture_greeting: "hello"]
+
+      assert errors_for(tmp_dir, install) == [
+               {:kind, "must be :personal or :work, got :home"}
+             ]
+    end
+
+    test "a broken registry stops the check before the file is read", %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "missing.exs")
+
+      assert {:error, [{:features, "gives id :fixture_core to both " <> _}]} =
+               Config.check(path, @home, [
+                 Core,
+                 Lanternhall.Fixtures.Features.Invalid.DuplicateCore
+               ])
+    end
+  end
+
   describe "path/1" do
     test "LANTERNHALL_CONFIG wins, expanded to an absolute path" do
       env = Map.merge(@home, %{"LANTERNHALL_CONFIG" => "/etc/lh.exs", "XDG_CONFIG_HOME" => "/x"})
@@ -273,16 +368,16 @@ defmodule Lanternhall.Platform.ConfigTest do
     end
   end
 
-  describe "load!/2" do
+  describe "load!/3" do
     test "returns the config when the file is valid", %{tmp_dir: tmp_dir} do
       path = write_install(tmp_dir, valid_install())
-      assert %Config{path: ^path, kind: :personal} = Config.load!(path, @home)
+      assert %Config{path: ^path, kind: :personal} = Config.load!(path, @home, @features)
     end
 
     test "raises once with one line per problem", %{tmp_dir: tmp_dir} do
       path = write_install(tmp_dir, kind: :home, port: 1, modules: [], time_zone: "UTC")
 
-      error = assert_raise RuntimeError, fn -> Config.load!(path, @home) end
+      error = assert_raise RuntimeError, fn -> Config.load!(path, @home, @features) end
 
       assert Exception.message(error) == """
              lanternhall config: :kind must be :personal or :work, got :home

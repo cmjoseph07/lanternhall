@@ -18,7 +18,12 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
       assert has_element?(view, "#install-time-zone", config.time_zone)
       assert has_element?(view, "#install-data-dir", config.data_dir)
       assert has_element?(view, "#install-config-path", config.path)
-      assert has_element?(view, "#install-modules", "None")
+    end
+
+    test "lists the enabled modules: every core one plus those the config enables",
+         %{view: view} do
+      assert has_element?(view, "#install-modules", "platform, fixture_core")
+      refute has_element?(view, "#install-modules", "fixture_personal")
     end
 
     test "notes the port this server really uses when it differs from the config", %{view: view} do

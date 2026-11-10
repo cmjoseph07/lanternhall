@@ -3,7 +3,8 @@ defmodule Mix.Tasks.Lanternhall.Config.Check do
 
   @moduledoc """
   Validates an install config file without starting the app, with the same checks and
-  messages as boot (`Lanternhall.Platform.Config.check/2`).
+  messages as boot (`Lanternhall.Platform.Config.check/3`), against the feature registry
+  in `config/config.exs`.
 
       mix lanternhall.config.check ~/.config/lanternhall/config.exs
 
@@ -11,17 +12,18 @@ defmodule Mix.Tasks.Lanternhall.Config.Check do
   """
   use Mix.Task
 
-  alias Lanternhall.Platform.Config
+  alias Lanternhall.Platform.{Config, Features}
 
   # Compile only: `app.config` would evaluate config/runtime.exs, which loads the
-  # install config this task is meant to check.
+  # install config this task is meant to check. Mix has already loaded config/config.exs,
+  # so the feature registry is set.
   @requirements ["compile"]
 
   @impl Mix.Task
   def run([path]) do
     path = Path.expand(path)
 
-    case Config.check(path, System.get_env()) do
+    case Config.check(path, System.get_env(), Features.all()) do
       {:ok, config} ->
         Mix.shell().info("lanternhall config: #{path} is valid (#{inspect(config.kind)} install)")
 

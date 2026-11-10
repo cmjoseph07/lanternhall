@@ -35,6 +35,21 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
            """
   end
 
+  test "checks modules against the feature registry", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "config.exs")
+
+    File.write!(path, """
+    import Config
+    config :lanternhall, :install, kind: :personal, port: 4100, modules: [:fixture_work], time_zone: "UTC"
+    """)
+
+    assert catch_exit(Check.run([path])) == {:shutdown, 1}
+    assert_received {:mix_shell, :error, [message]}
+
+    assert message ==
+             "lanternhall config: :modules contains :fixture_work, which is not allowed on a :personal install"
+  end
+
   test "expands a relative path so the message names the real file" do
     assert catch_exit(Check.run(["no-such-config.exs"])) == {:shutdown, 1}
     assert_received {:mix_shell, :error, [message]}

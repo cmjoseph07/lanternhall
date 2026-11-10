@@ -11,6 +11,24 @@ config :lanternhall,
   ecto_repos: [Lanternhall.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# The composition root (SPEC-platform.md section 3.2): every feature implementation, in
+# build order. The only place that names feature modules; platform reads this list.
+# Test adds synthetic fixture features from test/support/fixtures/features/ so every
+# registry path is tested before real features exist. Config scripts cannot read values
+# set earlier, so test.exs could only repeat this list; the branch here keeps one list.
+config :lanternhall,
+       :features,
+       [Lanternhall.Platform.PlatformFeature] ++
+         if(config_env() == :test,
+           do: [
+             Lanternhall.Fixtures.Features.Core,
+             Lanternhall.Fixtures.Features.Personal,
+             Lanternhall.Fixtures.Features.Work,
+             Lanternhall.Fixtures.Features.Integration
+           ],
+           else: []
+         )
+
 # Set explicitly (SPEC.md section 5 "Data layer"). Naming `journal_mode` here
 # also makes `mix ecto.create` build the file in WAL mode, so the migrator's
 # pooled connections never race to convert it ("database is locked").

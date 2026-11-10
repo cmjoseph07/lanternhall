@@ -5,24 +5,27 @@ defmodule Lanternhall.Application do
 
   use Application
 
-  alias Lanternhall.Platform.Config
+  alias Lanternhall.Platform.{Config, Features}
 
   @impl true
   def start(_type, _args) do
     # Validated by config/runtime.exs before any app started.
-    Config.put(Application.fetch_env!(:lanternhall, :install))
+    config = Application.fetch_env!(:lanternhall, :install)
+    Config.put(config)
 
-    children = [
-      LanternhallWeb.Telemetry,
-      Lanternhall.Repo,
-      {Ecto.Migrator,
-       repos: Application.fetch_env!(:lanternhall, :ecto_repos), skip: skip_migrations?()},
-      {Phoenix.PubSub, name: Lanternhall.PubSub},
-      # Start a worker by calling: Lanternhall.Worker.start_link(arg)
-      # {Lanternhall.Worker, arg},
-      # Start to serve requests, typically the last entry
-      LanternhallWeb.Endpoint
-    ]
+    children =
+      [
+        LanternhallWeb.Telemetry,
+        Lanternhall.Repo,
+        {Ecto.Migrator,
+         repos: Application.fetch_env!(:lanternhall, :ecto_repos), skip: skip_migrations?()},
+        {Phoenix.PubSub, name: Lanternhall.PubSub}
+      ] ++
+        Features.children(config) ++
+        [
+          # Start to serve requests, typically the last entry
+          LanternhallWeb.Endpoint
+        ]
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options

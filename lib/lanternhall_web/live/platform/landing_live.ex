@@ -8,10 +8,13 @@ defmodule LanternhallWeb.Platform.LandingLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    config = Config.get()
+
     {:ok,
      assign(socket,
        page_title: "Landing",
-       kind: Config.get().kind,
+       kind: config.kind,
+       module_ids: Enum.map(config.features, & &1.id()),
        version: Lanternhall.version()
      )}
   end
@@ -26,6 +29,9 @@ defmodule LanternhallWeb.Platform.LandingLive do
       <p class="text-base-content/70">
         <span id="install-kind" class="capitalize">{@kind}</span>
         install · Version <span id="app-version">{@version}</span>
+      </p>
+      <p class="text-base-content/70">
+        Modules: <span id="enabled-modules" class="font-mono">{Enum.join(@module_ids, ", ")}</span>
       </p>
       <p id="home-note" class="text-base-content/70">
         Home arrives later; this landing page holds its place.

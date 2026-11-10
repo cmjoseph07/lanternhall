@@ -16,4 +16,11 @@ defmodule LanternhallWeb.Platform.LandingLiveTest do
 
     assert has_element?(view, "#install-kind", "personal")
   end
+
+  test "lists the enabled modules", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    assert has_element?(view, "#enabled-modules", "platform, fixture_core")
+    refute has_element?(view, "#enabled-modules", "fixture_personal")
+  end
 end
