@@ -14,6 +14,8 @@ concurrency:
 
 # Actions are pinned by commit SHA (tag in the comment); each was at least 7 days old when pinned.
 # Hex is pinned for the same reason; rebar3 comes from builds.hex.pm for this Elixir version.
+# Each job caches its own deps and _build (key starts with the job id): the jobs build
+# different envs, and a shared key would keep only the first job's _build.
 
 jobs:
   ubuntu:
@@ -40,8 +42,8 @@ jobs:
           path: |
             deps
             _build
-          key: mix-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
-          restore-keys: mix-${{ steps.versions.outputs.key }}-
+          key: mix-${{ github.job }}-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ github.job }}-${{ steps.versions.outputs.key }}-
 
       - name: Install Hex and rebar3
         run: |
@@ -104,8 +106,8 @@ jobs:
           path: |
             deps
             _build
-          key: mix-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
-          restore-keys: mix-${{ steps.versions.outputs.key }}-
+          key: mix-${{ github.job }}-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ github.job }}-${{ steps.versions.outputs.key }}-
 
       - name: Install Hex and rebar3
         run: |
@@ -160,8 +162,8 @@ jobs:
           path: |
             deps
             _build
-          key: mix-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
-          restore-keys: mix-${{ steps.versions.outputs.key }}-
+          key: mix-${{ github.job }}-${{ steps.versions.outputs.key }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ github.job }}-${{ steps.versions.outputs.key }}-
 
       - name: Install Hex and rebar3
         run: |
