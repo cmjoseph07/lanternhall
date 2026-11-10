@@ -5,8 +5,8 @@ defmodule LanternhallWeb.FeatureGateTest do
 
   alias LanternhallWeb.{DisabledFeatureError, FeatureGate, RawHTTP}
 
-  defp raw_get(path) do
-    RawHTTP.request("GET #{path} HTTP/1.1", [{"host", "localhost:4002"}, {"accept", "text/html"}])
+  defp raw_get(path, accept \\ "text/html") do
+    RawHTTP.request("GET #{path} HTTP/1.1", [{"host", "localhost:4002"}, {"accept", accept}])
   end
 
   # Header values such as the CSP nonce and request id differ per request; names must not.
@@ -26,6 +26,16 @@ defmodule LanternhallWeb.FeatureGateTest do
 
     assert disabled.status == 404
     assert shape(disabled) == shape(raw_get("/no-such-page"))
+  end
+
+  # The gate plug runs before the browser pipeline, so its format negotiation never
+  # answers 406 for a LiveView route that should not exist.
+  test "a disabled feature's LiveView answers like a URL with no route for any format" do
+    assert shape(raw_get("/fixtures/personal", "application/json")) ==
+             shape(raw_get("/no-such-page", "application/json"))
+
+    assert shape(raw_get("/fixtures/personal?_format=json")) ==
+             shape(raw_get("/no-such-page?_format=json"))
   end
 
   test "live navigation into a disabled feature's LiveView ends in the 404 reply", %{conn: conn} do
