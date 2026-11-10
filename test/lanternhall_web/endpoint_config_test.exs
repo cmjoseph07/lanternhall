@@ -1,13 +1,31 @@
 defmodule LanternhallWeb.EndpointConfigTest do
-  # Not async: reading the prod runtime config needs process-wide env vars.
+  # Not async: reading the runtime config needs process-wide env vars.
   use ExUnit.Case, async: false
 
   @config_dir Path.expand("../../config", __DIR__)
 
-  for {env, port} <- [dev: 4000, test: 4002, prod: 4100] do
+  # Prod serves on the install config's port; this one differs from the examples' 4100.
+  @prod_port 4321
+
+  setup_all do
+    install = Path.join(System.tmp_dir!(), "lanternhall-endpoint-config-test.exs")
+
+    File.write!(install, """
+    import Config
+
+    config :lanternhall, :install,
+      kind: :work, port: #{@prod_port}, modules: [], time_zone: "Etc/UTC"
+    """)
+
+    on_exit(fn -> File.rm(install) end)
+    {:ok, install: install}
+  end
+
+  for {env, port} <- [dev: 4000, test: 4002, prod: @prod_port] do
     describe "#{env} endpoint" do
-      setup do
-        {:ok, endpoint: endpoint_config(unquote(env))}
+      setup %{install: install} do
+        config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => install})
+        {:ok, endpoint: config[:lanternhall][LanternhallWeb.Endpoint]}
       end
 
       test "binds to loopback only", %{endpoint: endpoint} do
@@ -24,31 +42,59 @@ defmodule LanternhallWeb.EndpointConfigTest do
     end
   end
 
+  describe "install config" do
+    for env <- [:dev, :test] do
+      test "#{env} defaults to the synthetic personal example" do
+        config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => nil})
+
+        assert config[:lanternhall][:install].path ==
+                 Path.join(@config_dir, "install/personal.example.exs")
+      end
+    end
+
+    test "dev honours LANTERNHALL_CONFIG", %{install: install} do
+      config = runtime_config(:dev, %{"LANTERNHALL_CONFIG" => install})
+      assert %{path: ^install, kind: :work} = config[:lanternhall][:install]
+    end
+
+    test "prod stops with the problem named when the file is bad", %{install: install} do
+      bad = install <> ".bad"
+      File.write!(bad, "import Config\nconfig :lanternhall, :install, kind: :home\n")
+      on_exit(fn -> File.rm(bad) end)
+
+      assert_raise RuntimeError, ~r/^lanternhall config: :kind must be :personal or :work/, fn ->
+        runtime_config(:prod, %{"LANTERNHALL_CONFIG" => bad})
+      end
+    end
+  end
+
   # Reads config.exs (which imports <env>.exs) and runtime.exs exactly as
   # Mix and releases do, so the assertion covers what each env really boots with.
-  defp endpoint_config(env) do
-    with_prod_env_vars(fn ->
+  defp runtime_config(env, vars) do
+    prod_vars = %{
+      "DATABASE_PATH" => "/nonexistent/lanternhall.db",
+      "SECRET_KEY_BASE" => "test-only"
+    }
+
+    with_env_vars(Map.merge(prod_vars, vars), fn ->
       compile_time = Config.Reader.read!(Path.join(@config_dir, "config.exs"), env: env)
       runtime = Config.Reader.read!(Path.join(@config_dir, "runtime.exs"), env: env)
-
-      compile_time
-      |> Config.Reader.merge(runtime)
-      |> get_in([:lanternhall, LanternhallWeb.Endpoint])
+      Config.Reader.merge(compile_time, runtime)
     end)
   end
 
-  defp with_prod_env_vars(fun) do
-    vars = %{"DATABASE_PATH" => "/nonexistent/lanternhall.db", "SECRET_KEY_BASE" => "test-only"}
+  # A nil value unsets the variable for the duration of `fun`.
+  defp with_env_vars(vars, fun) do
     previous = Map.new(vars, fn {key, _} -> {key, System.get_env(key)} end)
-    System.put_env(vars)
+    Enum.each(vars, &put_env/1)
 
     try do
       fun.()
     after
-      Enum.each(previous, fn
-        {key, nil} -> System.delete_env(key)
-        {key, value} -> System.put_env(key, value)
-      end)
+      Enum.each(previous, &put_env/1)
     end
   end
+
+  defp put_env({key, nil}), do: System.delete_env(key)
+  defp put_env({key, value}), do: System.put_env(key, value)
 end

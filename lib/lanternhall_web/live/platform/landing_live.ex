@@ -4,9 +4,16 @@ defmodule LanternhallWeb.Platform.LandingLive do
   """
   use LanternhallWeb, :live_view
 
+  alias Lanternhall.Platform.Config
+
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Landing", version: Lanternhall.version())}
+    {:ok,
+     assign(socket,
+       page_title: "Landing",
+       kind: Config.get().kind,
+       version: Lanternhall.version()
+     )}
   end
 
   @impl true
@@ -17,7 +24,8 @@ defmodule LanternhallWeb.Platform.LandingLive do
         <Layouts.logo id="landing-logo" class="w-48" />
       </h1>
       <p class="text-base-content/70">
-        Version <span id="app-version">{@version}</span>
+        <span id="install-kind" class="capitalize">{@kind}</span>
+        install · Version <span id="app-version">{@version}</span>
       </p>
       <p id="home-note" class="text-base-content/70">
         Home arrives later; this landing page holds its place.

@@ -10,4 +10,10 @@ defmodule LanternhallWeb.Platform.LandingLiveTest do
     assert has_element?(view, "#app-version", Mix.Project.config()[:version])
     assert has_element?(view, "#home-note", "Home arrives later")
   end
+
+  test "shows the install kind, which test boots with from the personal example", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    assert has_element?(view, "#install-kind", "personal")
+  end
 end

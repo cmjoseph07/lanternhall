@@ -16,6 +16,25 @@ import Config
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
+# Install config (SPEC-platform.md section 3.1), validated here so a bad value stops
+# boot before any app starts. Dev and test default to the synthetic personal example,
+# so they never read a real install's config.
+install_env =
+  if config_env() in [:dev, :test] and System.get_env("LANTERNHALL_CONFIG", "") == "" do
+    Map.put(
+      System.get_env(),
+      "LANTERNHALL_CONFIG",
+      Path.expand("install/personal.example.exs", __DIR__)
+    )
+  else
+    System.get_env()
+  end
+
+install =
+  Lanternhall.Platform.Config.load!(Lanternhall.Platform.Config.path(install_env), install_env)
+
+config :lanternhall, :install, install
+
 if System.get_env("PHX_SERVER") do
   config :lanternhall, LanternhallWeb.Endpoint, server: true
 end
@@ -59,8 +78,8 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  # Default prod port; the install config takes over in a later task.
-  port = 4100
+  # Dev and test keep fixed ports (4000, 4002); prod serves on the install's port.
+  port = install.port
 
   config :lanternhall, LanternhallWeb.Endpoint,
     url: [host: "localhost", port: port, scheme: "http"],

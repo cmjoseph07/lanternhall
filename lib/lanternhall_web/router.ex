@@ -21,6 +21,7 @@ defmodule LanternhallWeb.Router do
     pipe_through :browser
 
     live "/", Platform.LandingLive
+    live "/settings", Platform.Settings.InstallLive
   end
 
   scope "/", LanternhallWeb do

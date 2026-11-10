@@ -25,6 +25,8 @@ defmodule Lanternhall.MixProject do
       dialyzer: [
         plt_local_path: "priv/plts",
         plt_core_path: "priv/plts",
+        # Mix tasks in lib/mix/tasks call Mix, which is not in the app's runtime deps.
+        plt_add_apps: [:mix],
         flags: [:unmatched_returns, :error_handling, :extra_return, :missing_return]
       ]
     ]
@@ -83,6 +85,7 @@ defmodule Lanternhall.MixProject do
       {:telemetry_metrics, "== 1.2.0"},
       {:telemetry_poller, "== 1.3.0"},
       {:jason, "== 1.4.5"},
+      {:tz, "== 0.28.4"},
       {:bandit, "== 1.14.1"},
       {:credo, "== 1.7.19", only: [:dev, :test], runtime: false},
       {:sobelow, "== 0.18.1", only: [:dev, :test], runtime: false},

@@ -5,8 +5,13 @@ defmodule Lanternhall.Application do
 
   use Application
 
+  alias Lanternhall.Platform.Config
+
   @impl true
   def start(_type, _args) do
+    # Validated by config/runtime.exs before any app started.
+    Config.put(Application.fetch_env!(:lanternhall, :install))
+
     children = [
       LanternhallWeb.Telemetry,
       Lanternhall.Repo,
