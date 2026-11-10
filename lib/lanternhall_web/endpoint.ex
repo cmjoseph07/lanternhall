@@ -38,6 +38,9 @@ defmodule LanternhallWeb.Endpoint do
       |> SecurityHeaders.call(@security_headers)
       |> HostCheck.call([])
 
+    # Once the Host check has answered, the request ends here. Phoenix would stop on the
+    # halted conn too (its socket transport and plug pipeline both skip one), so this is
+    # a second layer and no test can tell it apart; it keeps the boundary explicit.
     if conn.halted, do: conn, else: super(conn, opts)
   end
 
