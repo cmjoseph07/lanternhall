@@ -104,39 +104,94 @@ defmodule LanternhallWeb.Layouts do
   end
 
   @doc """
-  Provides dark vs light theme toggle based on themes defined in app.css.
+  The top bar's theme toggle: system, light or dark.
 
-  See <head> in root.html.heex which applies the theme before page load.
+  A click dispatches `phx:set-theme`, which the inline script in
+  `root.html.heex` handles: it stores the choice and sets `data-theme` and
+  `data-theme-choice` on `<html>`. The highlight follows `data-theme-choice` in
+  CSS, so it is right from the first frame; the `.ThemeToggle` hook mirrors the
+  choice into `aria-pressed` for screen readers, and `phx-update="ignore"` keeps
+  LiveView from patching those attributes away.
   """
   def theme_toggle(assigns) do
     ~H"""
-    <div class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
-      <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0 transition-[left]" />
-
+    <div
+      id="theme-toggle"
+      phx-hook=".ThemeToggle"
+      phx-update="ignore"
+      role="group"
+      aria-label="Theme"
+      class="relative flex rounded-full bg-base-300 p-0.5"
+    >
+      <div
+        aria-hidden="true"
+        class="absolute top-0.5 left-0.5 size-8 rounded-full bg-primary motion-safe:transition-transform [[data-theme-choice=light]_&]:translate-x-8 [[data-theme-choice=dark]_&]:translate-x-16"
+      />
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        :for={
+          {choice, label, icon, selected} <- [
+            {"system", "System theme", "hero-computer-desktop-micro",
+             "[[data-theme-choice=system]_&]:text-primary-content!"},
+            {"light", "Light theme", "hero-sun-micro",
+             "[[data-theme-choice=light]_&]:text-primary-content!"},
+            {"dark", "Dark theme", "hero-moon-micro",
+             "[[data-theme-choice=dark]_&]:text-primary-content!"}
+          ]
+        }
+        type="button"
+        data-phx-theme={choice}
+        aria-label={label}
         phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="system"
+        class={[
+          "relative flex size-8 cursor-pointer items-center justify-center rounded-full",
+          "text-base-content/70 hover:text-base-content motion-safe:transition-colors",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          selected
+        ]}
       >
-        <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="light"
-      >
-        <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="dark"
-      >
-        <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name={icon} class="size-4" />
       </button>
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".ThemeToggle">
+      export default {
+        mounted() {
+          const root = document.documentElement
+          this.sync = () => {
+            const choice = root.getAttribute("data-theme-choice")
+            for (const button of this.el.querySelectorAll("button[data-phx-theme]")) {
+              button.setAttribute("aria-pressed", String(button.dataset.phxTheme === choice))
+            }
+          }
+          this.observer = new MutationObserver(this.sync)
+          this.observer.observe(root, { attributes: true, attributeFilter: ["data-theme-choice"] })
+          this.sync()
+        },
+        destroyed() {
+          this.observer.disconnect()
+        }
+      }
+    </script>
+    """
+  end
+
+  # The logo is inlined rather than loaded with <img>, so its `currentColor`
+  # wordmark follows the theme's text color. Read at compile time from the one
+  # source file, without its comments.
+  @logo_path Path.expand("../../../priv/static/images/logo.svg", __DIR__)
+  @external_resource @logo_path
+  @logo_svg @logo_path |> File.read!() |> String.replace(~r/\s*<!--.*?-->/s, "")
+
+  @doc """
+  Renders the Lanternhall logo inline, named "Lanternhall" for screen readers.
+  """
+  attr :id, :string, required: true
+  attr :class, :any, default: nil
+
+  def logo(assigns) do
+    assigns = assign(assigns, :svg, raw(@logo_svg))
+
+    ~H"""
+    <span id={@id} role="img" aria-label="Lanternhall" class={["block", @class]}>{@svg}</span>
     """
   end
 end

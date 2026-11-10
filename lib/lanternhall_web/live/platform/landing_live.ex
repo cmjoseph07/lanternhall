@@ -13,7 +13,9 @@ defmodule LanternhallWeb.Platform.LandingLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash}>
-      <h1 class="text-2xl font-semibold">Lanternhall</h1>
+      <h1>
+        <Layouts.logo id="landing-logo" class="w-48" />
+      </h1>
       <p class="text-base-content/70">
         Version <span id="app-version">{@version}</span>
       </p>

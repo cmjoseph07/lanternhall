@@ -4,6 +4,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <%!--
+      Applies the theme before first paint, so no frame shows the wrong one: the
+      stylesheet below is render-blocking, and this runs ahead of it. The choice
+      (system, light or dark; dark when none is stored) lives in localStorage and
+      becomes `data-theme` (a daisyUI theme from app.css) plus `data-theme-choice`
+      (what the top bar toggle shows). The CSP nonce allows exactly this script.
+    --%>
+    <script nonce={@csp_nonce}>
+      (() => {
+        const root = document.documentElement;
+        const systemDark = matchMedia("(prefers-color-scheme: dark)");
+        const choices = ["system", "light", "dark"];
+
+        const apply = (stored) => {
+          const choice = choices.includes(stored) ? stored : "dark";
+          const mode = choice === "system" ? (systemDark.matches ? "dark" : "light") : choice;
+          root.setAttribute("data-theme", `lanternhall-${mode}`);
+          root.setAttribute("data-theme-choice", choice);
+        };
+
+        apply(localStorage.getItem("phx:theme"));
+        window.addEventListener("storage", (e) => e.key === "phx:theme" && apply(e.newValue));
+        window.addEventListener("phx:set-theme", (e) => {
+          localStorage.setItem("phx:theme", e.target.dataset.phxTheme);
+          apply(e.target.dataset.phxTheme);
+        });
+        systemDark.addEventListener("change", () => {
+          if (root.getAttribute("data-theme-choice") === "system") apply("system");
+        });
+      })();
+    </script>
     <.live_title default="Lanternhall" suffix=" · Lanternhall" phx-no-format>{assigns[:page_title]}</.live_title>
     <%!-- PNG first with `sizes`, so browsers that read SVG favicons pick the SVG. --%>
     <link rel="icon" href={~p"/images/favicon-32.png"} sizes="32x32" type="image/png" />
@@ -12,34 +43,6 @@
     <link rel="manifest" href={~p"/manifest.webmanifest"} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
-    </script>
-    <script nonce={@csp_nonce}>
-      (() => {
-        const systemTheme = () => matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-
-        const setTheme = (theme) => {
-          if (theme === "system") {
-            localStorage.removeItem("phx:theme");
-            document.documentElement.setAttribute("data-theme", systemTheme());
-            document.documentElement.setAttribute("data-theme-source", "system");
-          } else {
-            localStorage.setItem("phx:theme", theme);
-            document.documentElement.setAttribute("data-theme", theme);
-            document.documentElement.setAttribute("data-theme-source", "user");
-          }
-        };
-        if (!document.documentElement.hasAttribute("data-theme")) {
-          setTheme(localStorage.getItem("phx:theme") || "system");
-        }
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
-
-        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-          if (document.documentElement.getAttribute("data-theme-source") === "system") {
-            document.documentElement.setAttribute("data-theme", systemTheme());
-          }
-        });
-      })();
     </script>
   </head>
   <body>
