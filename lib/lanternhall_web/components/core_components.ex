@@ -74,7 +74,11 @@ defmodule LanternhallWeb.CoreComponents do
         <p>{msg}</p>
       </div>
       <div class="flex-1" />
-      <button type="button" class="group self-start cursor-pointer" aria-label="close">
+      <button
+        type="button"
+        class="group self-start cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+        aria-label="close"
+      >
         <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
       </button>
     </div>

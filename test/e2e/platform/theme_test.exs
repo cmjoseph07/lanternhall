@@ -165,15 +165,19 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
-  # WCAG 2.2 AA as the page renders, once running animations (such as a flash fading
-  # in) finish: each background behind an element is painted at its node's opacity
-  # (its own times its ancestors'), then the element's color at its full opacity, and
-  # both are read back as sRGB. Icons are masks filled with `background-color`, so
-  # that is their color. Each entry is [selector, minimum ratio]: 4.5:1 for text
-  # (1.4.3), 3:1 for icons (1.4.11).
-  @paint_rendered """
-  (async (entries) => {
-    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+  # WCAG 2.2 AA as each page renders, measured in the browser once animations and
+  # transitions finish. Every visible element with its own text is held to 4.5:1
+  # (1.4.3; 3:1 for large text), every icon to 3:1 (1.4.11; icons are masks filled with
+  # `background-color`), and every focusable element must show a focus ring of 3:1
+  # against what lies around it (2.4.7, 1.4.11). Logos are exempt (1.4.3).
+  #
+  # The color behind a point is what the browser stacks there: each element under it,
+  # from the root up, painted at its effective opacity onto a 1x1 canvas, so a sibling
+  # drawn behind an element (the toggle's thumb) counts like an ancestor's background.
+  @measure_page """
+  (async () => {
+    const settle = () => Promise.all(document.getAnimations().map((a) => a.finished));
+    await settle();
     const canvas = Object.assign(document.createElement("canvas"), { width: 1, height: 1 });
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const paint = (color, alpha) => {
@@ -185,49 +189,89 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
       ctx.fillRect(0, 0, 1, 1);
       return [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
     };
-    return entries.map(([selector, minimum]) => {
-      const el = document.querySelector(selector);
-      if (!el) throw new Error(`nothing matches ${selector}`);
-      const icon = [...el.classList].some((c) => c.startsWith("hero-"));
-      const chain = [];
-      for (let node = el; node; node = node.parentElement) chain.unshift(node);
+    const opacity = (node) => {
+      let o = 1;
+      for (let n = node; n; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
+      return o;
+    };
+    // What lies under (x, y) below `el` (and `el` itself when `withSelf`), bottom first.
+    const backdrop = (x, y, el, withSelf) => {
+      const hits = document.elementsFromPoint(x, y);
+      let below = hits;
+      if (el) {
+        const at = hits.indexOf(el);
+        below = [];
+        if (at >= 0) below = hits.slice(at + 1);
+        else for (let n = el.parentElement; n; n = n.parentElement) below.push(n);
+        if (withSelf) below.unshift(el);
+      }
       ctx.clearRect(0, 0, 1, 1);
       let bg = paint("#ffffff", 1);
-      let opacity = 1;
-      for (const node of chain) {
-        const style = getComputedStyle(node);
-        opacity *= Number(style.opacity);
-        if (node !== el || !icon) bg = paint(style.backgroundColor, opacity);
-      }
+      for (const node of below.reverse()) bg = paint(getComputedStyle(node).backgroundColor, opacity(node));
+      return bg;
+    };
+    const name = (el) => {
+      const icon = [...el.classList].find((c) => c.startsWith("hero-"));
+      if (icon) return `${icon} in ${name(el.closest("[aria-label]") || el.parentElement)}`;
+      const label = el.getAttribute("aria-label") || el.textContent.trim().slice(0, 30);
+      return `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""} "${label}"`;
+    };
+    const visible = (el) => {
+      const rect = el.getBoundingClientRect();
+      return el.checkVisibility({ visibilityProperty: true }) && rect.width > 1 && rect.height > 1;
+    };
+    const center = (el) => {
+      const rect = el.getBoundingClientRect();
+      return [rect.left + rect.width / 2, rect.top + rect.height / 2];
+    };
+    const exempt = (el) => el.closest("[role=img], script, style, template");
+    const all = [...document.body.querySelectorAll("*")].filter((el) => !exempt(el) && visible(el));
+    const results = [];
+
+    for (const el of all) {
       const style = getComputedStyle(el);
-      const fg = paint(icon ? style.backgroundColor : style.color, opacity);
-      return { selector, minimum, bg, fg };
-    });
-  })
+      const icon = [...el.classList].some((c) => c.startsWith("hero-"));
+      const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!icon && !ownText) continue;
+      const size = parseFloat(style.fontSize);
+      const large = size >= 24 || (size >= 18.66 && Number(style.fontWeight) >= 700);
+      const [x, y] = center(el);
+      const bg = backdrop(x, y, el, !icon);
+      const fg = paint(icon ? style.backgroundColor : style.color, opacity(el));
+      results.push({ what: `${icon ? "icon" : "text"} ${name(el)}`, minimum: icon || large ? 3 : 4.5, bg, fg });
+    }
+
+    const focusable = all.filter((el) => el.matches("a[href], button, input, select, textarea, [tabindex]"));
+    for (const el of focusable) {
+      el.focus({ focusVisible: true });
+      await settle();
+      const style = getComputedStyle(el);
+      if (!el.matches(":focus-visible") || style.outlineStyle === "none" || parseFloat(style.outlineWidth) === 0) {
+        results.push({ what: `focus ring ${name(el)}`, problem: "shows no focus ring" });
+      } else {
+        const rect = el.getBoundingClientRect();
+        const ring = parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth) / 2;
+        const bg = backdrop(rect.right + ring, rect.top + rect.height / 2, null, false);
+        const fg = paint(style.outlineColor, opacity(el));
+        results.push({ what: `focus ring ${name(el)}`, minimum: 3, bg, fg });
+      }
+      el.blur();
+    }
+    await settle();
+    return results;
+  })()
   """
 
-  @flash_parts (for kind <- ~w(info error),
-                    {part, minimum} <- [
-                      {"p", 4.5},
-                      {"[class*=hero-]:not(button *)", 3},
-                      {"button [class*=hero-]", 3}
-                    ] do
-                  ["#flash-#{kind} #{part}", minimum]
-                end)
+  @pages ["/", "/settings", "/fixtures/core?flashes"]
 
-  test "flash text and icons meet WCAG 2.2 AA contrast in both themes", %{conn: conn} do
+  test "every rendered text, icon and focus ring meets WCAG 2.2 AA contrast in both themes",
+       %{conn: conn} do
     conn
-    |> visit(~p"/fixtures/core?flashes")
-    |> assert_has("[data-phx-main].phx-connected")
-    |> assert_has("html[data-theme=#{@dark}]")
-    |> assert_rendered_contrast(@flash_parts)
+    |> assert_pages_contrast(@dark)
     |> visit(~p"/")
     |> assert_has("[data-phx-main].phx-connected")
     |> choose_theme("light")
-    |> visit(~p"/fixtures/core?flashes")
-    |> assert_has("[data-phx-main].phx-connected")
-    |> assert_has("html[data-theme=#{@light}]")
-    |> assert_rendered_contrast(@flash_parts)
+    |> assert_pages_contrast(@light)
     |> assert_clean_browser()
   end
 
@@ -302,17 +346,34 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     end)
   end
 
-  defp assert_rendered_contrast(conn, entries) do
-    Playwright.evaluate(conn, "#{@paint_rendered}(#{JSON.encode!(entries)})", fn measured ->
-      failures =
-        for %{"selector" => selector, "minimum" => minimum, "bg" => bg, "fg" => fg} <- measured,
-            ratio = contrast(fg, bg),
-            ratio < minimum,
-            do: "#{selector} is #{Float.round(ratio, 2)}:1, needs #{minimum}:1"
+  defp assert_pages_contrast(conn, theme),
+    do: Enum.reduce(@pages, conn, &assert_page_contrast(&2, &1, theme))
 
-      assert length(measured) == length(entries)
+  defp assert_page_contrast(conn, page, theme) do
+    conn
+    |> visit(page)
+    |> assert_has("[data-phx-main].phx-connected")
+    |> assert_has("html[data-theme=#{theme}]")
+    |> Playwright.evaluate(@measure_page, fn measured ->
+      kinds = measured |> Enum.map(&(&1["what"] |> String.split(" ") |> hd())) |> Enum.uniq()
+
+      failures =
+        for entry <- measured,
+            failure = contrast_failure(entry),
+            do: "#{theme} #{page}: #{entry["what"]} #{failure}"
+
+      assert Enum.sort(kinds) == ["focus", "icon", "text"],
+             "#{page} measured only #{inspect(kinds)}"
+
       assert failures == []
     end)
+  end
+
+  defp contrast_failure(%{"problem" => problem}), do: problem
+
+  defp contrast_failure(%{"minimum" => minimum, "bg" => bg, "fg" => fg}) do
+    ratio = contrast(fg, bg)
+    if ratio < minimum, do: "is #{Float.round(ratio, 2)}:1, needs #{minimum}:1"
   end
 
   # WCAG 2.2 contrast ratio of two sRGB colors (https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio).

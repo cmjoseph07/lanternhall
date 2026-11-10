@@ -115,7 +115,9 @@ defmodule LanternhallWeb.Layouts do
   `data-theme-choice` on `<html>`. The highlight follows `data-theme-choice` in
   CSS, so it is right from the first frame; the `.ThemeToggle` hook mirrors the
   choice into `aria-pressed` for screen readers, and `phx-update="ignore"` keeps
-  LiveView from patching those attributes away.
+  LiveView from patching those attributes away. The focus ring is drawn inside the
+  button, so it never runs into the thumb under a neighbouring button; on the selected
+  button it takes the thumb's content color.
   """
   def theme_toggle(assigns) do
     ~H"""
@@ -135,11 +137,11 @@ defmodule LanternhallWeb.Layouts do
         :for={
           {choice, label, icon, selected} <- [
             {"system", "System theme", "hero-computer-desktop-micro",
-             "[[data-theme-choice=system]_&]:text-primary-content!"},
+             "[[data-theme-choice=system]_&]:text-primary-content! [[data-theme-choice=system]_&]:outline-primary-content"},
             {"light", "Light theme", "hero-sun-micro",
-             "[[data-theme-choice=light]_&]:text-primary-content!"},
+             "[[data-theme-choice=light]_&]:text-primary-content! [[data-theme-choice=light]_&]:outline-primary-content"},
             {"dark", "Dark theme", "hero-moon-micro",
-             "[[data-theme-choice=dark]_&]:text-primary-content!"}
+             "[[data-theme-choice=dark]_&]:text-primary-content! [[data-theme-choice=dark]_&]:outline-primary-content"}
           ]
         }
         type="button"
@@ -149,7 +151,7 @@ defmodule LanternhallWeb.Layouts do
         class={[
           "relative flex size-8 cursor-pointer items-center justify-center rounded-full",
           "text-base-content/70 hover:text-base-content motion-safe:transition-colors",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
           selected
         ]}
       >
