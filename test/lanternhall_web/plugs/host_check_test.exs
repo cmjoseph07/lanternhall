@@ -100,17 +100,4 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
       assert response.body == ""
     end
   end
-
-  describe "the LiveView long-poll fallback" do
-    test "with a bad Host gets 400 with a plain body" do
-      response =
-        RawHTTP.request("GET /live/longpoll?vsn=2.0.0 HTTP/1.1", [
-          {"host", "evil.test"},
-          {"origin", "http://localhost:4002"}
-        ])
-
-      assert response.status == 400
-      assert response.body == "Bad Request: open this app at http://localhost:4002\n"
-    end
-  end
 end

@@ -37,6 +37,18 @@ defmodule LanternhallWeb.SecurityTest do
         assert response.status == 403
       end
     end
+
+    # WebSocket is the only transport: on loopback the long-poll fallback is never
+    # needed, and a transport that does not exist cannot be reached from another Origin.
+    test "over long-poll is not offered" do
+      response =
+        RawHTTP.request("GET /live/longpoll?vsn=2.0.0 HTTP/1.1", [
+          {"host", "localhost:4002"},
+          {"origin", "http://localhost:4002"}
+        ])
+
+      assert response.status == 404
+    end
   end
 
   describe "a POST through the :browser pipeline" do

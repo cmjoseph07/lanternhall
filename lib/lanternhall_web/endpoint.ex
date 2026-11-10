@@ -14,9 +14,11 @@ defmodule LanternhallWeb.Endpoint do
     same_site: "Lax"
   ]
 
+  # WebSocket only: on loopback the long-poll fallback is never needed, and each
+  # transport is one more place to enforce the Origin check.
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
-    longpoll: [connect_info: [session: @session_options]]
+    longpoll: false
 
   # `code_reloading?` is true in dev only, where dev tools need the CSP carve-out.
   @security_headers SecurityHeaders.init(dev_tools: code_reloading?)
