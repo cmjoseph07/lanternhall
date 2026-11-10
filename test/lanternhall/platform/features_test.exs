@@ -120,6 +120,17 @@ defmodule Lanternhall.Platform.FeaturesTest do
                 ]}
     end
 
+    test "refuses a dependency of an optional feature on one of the other kind" do
+      registry = [Core, Integration, Work, Invalid.PersonalOnWork]
+
+      assert Features.validate(registry) ==
+               {:error,
+                [
+                  {:features,
+                   "has :personal feature :fixture_personal_on_work depend on :work feature :fixture_work; a feature may depend only on :core features and features of its own kind"}
+                ]}
+    end
+
     # The cycle sits after features with no cycle, as in a real registry, which always
     # starts with PlatformFeature.
     test "refuses a dependency cycle, naming the path" do
