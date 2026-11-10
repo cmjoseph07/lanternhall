@@ -19,6 +19,8 @@ concurrency:
 # Hex is pinned for the same reason; rebar3 comes from builds.hex.pm for this Elixir version.
 # Each job caches its own deps and _build (key starts with the job id): the jobs build
 # different envs, and a shared key would keep only the first job's _build.
+# Checkout does not persist the token: no step pushes or fetches, so later steps (deps,
+# package scripts, tests) get no git credentials to read.
 
 jobs:
   ubuntu:
@@ -27,6 +29,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
@@ -91,6 +95,8 @@ jobs:
       MIX_ENV: test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
@@ -147,6 +153,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
