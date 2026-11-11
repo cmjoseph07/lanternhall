@@ -24,10 +24,28 @@
           root.setAttribute("data-theme-choice", choice);
         };
 
-        apply(localStorage.getItem("phx:theme"));
+        // Reading `localStorage` throws when the browser blocks site storage, and writing
+        // throws when it is full. The choice then lives only in `data-theme-choice`, for as
+        // long as this page is open.
+        const load = () => {
+          try {
+            return localStorage.getItem("phx:theme");
+          } catch {
+            return null;
+          }
+        };
+        const save = (choice) => {
+          try {
+            localStorage.setItem("phx:theme", choice);
+          } catch {
+            // Blocked or full storage: the choice is not kept.
+          }
+        };
+
+        apply(load());
         window.addEventListener("storage", (e) => e.key === "phx:theme" && apply(e.newValue));
         window.addEventListener("phx:set-theme", (e) => {
-          localStorage.setItem("phx:theme", e.target.dataset.phxTheme);
+          save(e.target.dataset.phxTheme);
           apply(e.target.dataset.phxTheme);
         });
         systemDark.addEventListener("change", () => {

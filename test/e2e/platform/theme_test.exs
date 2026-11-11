@@ -145,6 +145,59 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  test "with site storage blocked the page still renders its theme from the first frame",
+       %{conn: conn} do
+    # What Chromium does when site data is blocked: reading either storage throws. It
+    # blocks the session cookie too, so LiveView cannot run there; the theme must not
+    # depend on it.
+    {:ok, _} =
+      BrowserContext.add_init_script(conn.context_id,
+        source: """
+        for (const name of ["localStorage", "sessionStorage"]) {
+          Object.defineProperty(window, name, {
+            get() {
+              throw new DOMException("Access is denied for this document.", "SecurityError");
+            }
+          });
+        }
+        """,
+        timeout: Playwright.Config.global(:timeout)
+      )
+
+    conn
+    |> visit(~p"/")
+    |> assert_first_frame(@dark)
+    |> assert_has("html[data-theme-choice=dark]")
+    # One error only: LiveView's, reading storage as app.js starts.
+    |> assert_clean_browser(expect_errors: ["SecurityError: Access is denied for this document."])
+  end
+
+  test "with localStorage full the toggle still switches the theme", %{conn: conn} do
+    # Reads work; every write to localStorage throws (sessionStorage, which LiveView
+    # writes, still works).
+    {:ok, _} =
+      BrowserContext.add_init_script(conn.context_id,
+        source: """
+        const setItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (key, value) {
+          if (this === window.localStorage) {
+            throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+          }
+          return setItem.call(this, key, value);
+        };
+        """,
+        timeout: Playwright.Config.global(:timeout)
+      )
+
+    conn
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("light")
+    |> assert_has("html[data-theme=#{@light}]")
+    |> assert_pressed("light")
+    |> assert_clean_browser()
+  end
+
   test "the toggle's buttons are named for screen readers", %{conn: conn} do
     conn
     |> visit(~p"/")
