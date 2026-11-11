@@ -40,7 +40,10 @@
     <link rel="icon" href={~p"/images/favicon-32.png"} sizes="32x32" type="image/png" />
     <link rel="icon" href={~p"/images/favicon.svg"} type="image/svg+xml" />
     <link rel="apple-touch-icon" href={~p"/images/apple-touch-icon.png"} />
-    <link rel="manifest" href={~p"/manifest.webmanifest"} />
+    <%!-- A plain path, not ~p: in prod ~p links the digested manifest-<hash>.webmanifest,
+         which Plug.Static never serves (its `only` option names manifest.webmanifest
+         exactly). The manifest's "id" keeps the app's identity. --%>
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
