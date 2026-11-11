@@ -34,10 +34,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Full history for gitleaks.
+          fetch-depth: 0
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
           version: 2026.10.25
+
+      # The pre-commit hook scans staged changes only, and `--no-verify` skips it. This scans
+      # every commit, so a secret added and removed again still fails. Known findings are
+      # skipped by fingerprint in .gitleaksignore.
+      - name: Secret scan
+        run: gitleaks git --redact --no-banner --verbose
 
       - name: Read toolchain versions
         id: versions

@@ -1,0 +1,5 @@
+# Findings gitleaks may skip, by fingerprint (commit:file:rule:line).
+# Dev and test secret_key_base from the phx.new generator: they sign cookies only on the
+# loopback dev and test servers; prod reads SECRET_KEY_BASE from the environment.
+590dc86de7733fa1902f7e98581636dd47cf6c7c:config/dev.exs:generic-api-key:22
+590dc86de7733fa1902f7e98581636dd47cf6c7c:config/test.exs:generic-api-key:19
