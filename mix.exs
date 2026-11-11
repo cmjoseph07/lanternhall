@@ -10,6 +10,7 @@ defmodule Lanternhall.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      releases: releases(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
       test_coverage: [
@@ -46,6 +47,22 @@ defmodule Lanternhall.MixProject do
     [
       preferred_envs: [precommit: :test]
     ]
+  end
+
+  defp releases do
+    [lanternhall: [steps: [&require_digested_assets/1, :assemble]]]
+  end
+
+  # With `cache_static_manifest` set (config/prod.exs), the release serves only digested
+  # assets; built without them it boots fine but every page loads with no CSS or JS.
+  defp require_digested_assets(release) do
+    manifest = Application.get_env(:lanternhall, LanternhallWeb.Endpoint)[:cache_static_manifest]
+
+    if manifest && !File.exists?(manifest) do
+      Mix.raise("#{manifest} is missing: run `mix assets.deploy` before `mix release`")
+    end
+
+    release
   end
 
   # Specifies which paths to compile per environment.
@@ -112,6 +129,7 @@ defmodule Lanternhall.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind lanternhall", "esbuild lanternhall"],
       "assets.deploy": [
+        "compile",
         "tailwind lanternhall --minify",
         "esbuild lanternhall --minify",
         "phx.digest"

@@ -205,6 +205,14 @@ jobs:
       - name: Tests
         run: mix test --exclude e2e
 
+      # The release refuses to build without digested assets (mix.exs releases/0).
+      - name: Prod assets
+        run: |
+          mix assets.setup
+          mix assets.deploy
+        env:
+          MIX_ENV: prod
+
       - name: Prod release
         run: mix release --overwrite
         env:
