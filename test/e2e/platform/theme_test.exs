@@ -149,6 +149,8 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  # The page's expected error is also written to the test log; show it only on failure.
+  @tag :capture_log
   test "with site storage blocked the page still renders its theme from the first frame",
        %{conn: conn} do
     # What Chromium does when site data is blocked: reading either storage throws. It
