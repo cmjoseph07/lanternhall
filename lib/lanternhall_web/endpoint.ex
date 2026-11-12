@@ -58,8 +58,7 @@ defmodule LanternhallWeb.Endpoint do
     raise_on_missing_only: code_reloading?,
     cache_control_for_vsn_requests: "public, max-age=31536000, immutable"
 
-  # Code reloading can be explicitly enabled under the
-  # :code_reloader configuration of your endpoint.
+  # Code reloading is on in dev only (`code_reloader: true` in config/dev.exs).
   if code_reloading? do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
