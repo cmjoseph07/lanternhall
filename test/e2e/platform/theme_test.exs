@@ -14,7 +14,9 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
 
   # Runs before the page's own scripts on every load: logs each `data-theme` the
   # root element takes, and what the root looks like in the first frame, which the
-  # browser renders right after `requestAnimationFrame` callbacks run.
+  # browser renders right after `requestAnimationFrame` callbacks run. That frame can
+  # come after the `load` event `visit` returns on, so `__firstFrame` is a promise
+  # and reading it waits for the frame.
   @record_theme_frames """
   window.__themeLog = [];
   new MutationObserver((records) => {
@@ -24,11 +26,13 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
       }
     }
   }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-theme"] });
-  requestAnimationFrame(() => {
-    window.__firstFrame = {
-      theme: document.documentElement.getAttribute("data-theme"),
-      background: getComputedStyle(document.documentElement).backgroundColor
-    };
+  window.__firstFrame = new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve({
+        theme: document.documentElement.getAttribute("data-theme"),
+        background: getComputedStyle(document.documentElement).backgroundColor
+      });
+    });
   });
   """
 
