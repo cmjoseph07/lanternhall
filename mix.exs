@@ -137,7 +137,7 @@ defmodule Lanternhall.MixProject do
       precommit: [
         "format --check-formatted",
         "compile --warnings-as-errors",
-        "credo --strict",
+        "credo",
         "sobelow --config",
         "cmd pnpm --dir assets exec biome check js scripts",
         "test --exclude e2e --cover"

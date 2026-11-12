@@ -43,10 +43,9 @@
       #
       requires: [],
       #
-      # If you want to enforce a style guide and need a more traditional linting
-      # experience, you can change `strict` to `true` below:
+      # Low-priority issues fail too; no caller needs to pass `--strict`.
       #
-      strict: false,
+      strict: true,
       #
       # To modify the timeout for parsing files, change this value:
       #

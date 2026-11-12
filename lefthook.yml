@@ -9,7 +9,7 @@ pre-commit:
 
     - name: credo
       glob: "*.{ex,exs}"
-      run: mix credo --strict {staged_files}
+      run: mix credo {staged_files}
 
     - name: gitleaks
       run: gitleaks git --pre-commit --staged --redact --no-banner --verbose
