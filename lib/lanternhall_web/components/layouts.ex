@@ -47,6 +47,9 @@ defmodule LanternhallWeb.Layouts do
   @doc """
   Shows the flash group with standard titles and content.
 
+  The group is a polite live region: a screen reader reads out each flash that appears
+  in it, once.
+
   ## Examples
 
       <.flash_group flash={@flash} />

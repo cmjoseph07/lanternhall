@@ -1,7 +1,7 @@
 defmodule LanternhallWeb.E2E.Platform.FlashTest do
   # Flashes stack in one column below the top bar, right-aligned with its controls, so
   # none hides another or the top bar, at the widths the pixel check uses
-  # (SPEC-platform.md section 8).
+  # (SPEC-platform.md section 8). A screen reader hears each one once.
   use LanternhallWeb.E2ECase
 
   alias PhoenixTest.Playwright
@@ -43,6 +43,39 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
       |> assert_has("html[data-theme=lanternhall-light]")
       |> assert_clean_browser()
     end
+  end
+
+  # For each flash: the live regions it sits in, innermost first, and its close button's name.
+  @announcements """
+  (() => {
+    const live = "[aria-live]:not([aria-live=off]), [role=alert], [role=status], [role=log]";
+    return ["#flash-info", "#flash-error", "#client-error", "#server-error"].map((selector) => {
+      const flash = document.querySelector(selector);
+      const regions = [];
+      for (let node = flash; node; node = node.parentElement) {
+        if (node.matches(live)) {
+          regions.push(`${node.id} ${node.getAttribute("aria-live") || node.getAttribute("role")}`);
+        }
+      }
+      return { flash: selector, regions, close: flash.querySelector("button").getAttribute("aria-label") };
+    });
+  })()
+  """
+
+  # A flash inside two live regions is read out twice: once by each.
+  test "a screen reader hears each flash once, and its close button is named Close",
+       %{conn: conn} do
+    conn
+    |> visit(~p"/fixtures/core?flashes")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> Playwright.evaluate(@announcements, fn flashes ->
+      assert flashes ==
+               for(
+                 flash <- ~w(#flash-info #flash-error #client-error #server-error),
+                 do: %{"flash" => flash, "regions" => ["flash-group polite"], "close" => "Close"}
+               )
+    end)
+    |> assert_clean_browser()
   end
 
   defp overlap?([l1, t1, r1, b1], [l2, t2, r2, b2]),

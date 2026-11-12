@@ -31,6 +31,10 @@ defmodule LanternhallWeb.CoreComponents do
   @doc """
   Renders flash notices.
 
+  A flash is not a live region itself: `Layouts.flash_group/1`, where flashes render,
+  is the one that announces it. A second one inside it would make a screen reader read
+  the flash out twice.
+
   ## Examples
 
       <.flash kind={:info} flash={@flash} />
@@ -59,7 +63,6 @@ defmodule LanternhallWeb.CoreComponents do
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
-      role="alert"
       class={[
         "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
         @kind == :info && "alert-info",
@@ -77,7 +80,7 @@ defmodule LanternhallWeb.CoreComponents do
       <button
         type="button"
         class="group self-start cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-        aria-label="close"
+        aria-label="Close"
       >
         <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
       </button>
