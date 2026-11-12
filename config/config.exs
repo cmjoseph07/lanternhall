@@ -1,10 +1,6 @@
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Config module.
-#
-# This configuration file is loaded before any dependency and
-# is restricted to this project.
-
-# General application configuration
+# Compile-time configuration shared by every environment. The environment's own file
+# (dev.exs, test.exs or prod.exs) is imported at the bottom and overrides it; runtime.exs
+# runs at boot.
 import Config
 
 config :lanternhall,
@@ -64,7 +60,7 @@ config :esbuild,
   version: "0.25.4",
   lanternhall: [
     args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]

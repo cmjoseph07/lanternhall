@@ -1,10 +1,6 @@
 import Config
 
-# Configure your database
-#
-# The MIX_TEST_PARTITION environment variable can be used
-# to provide built-in test partitioning in CI environment.
-# Run `mix help test` for more information.
+# The test database, a file at the repo root, behind the SQL sandbox.
 config :lanternhall, Lanternhall.Repo,
   database: Path.expand("../lanternhall_test.db", __DIR__),
   pool_size: 5,

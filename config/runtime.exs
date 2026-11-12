@@ -1,21 +1,8 @@
 import Config
 
-# config/runtime.exs is executed for all environments, including
-# during releases. It is executed after compilation and before the
-# system starts, so it is typically used to load production configuration
-# and secrets from environment variables or elsewhere. Do not define
-# any compile-time configuration in here, as it won't be applied.
-# The block below contains prod specific runtime configuration.
+# Runs at boot in every environment, and in a release: after compilation, before any
+# app starts. Compile-time settings set here would not take effect.
 
-# ## Using releases
-#
-# If you use `mix release`, you need to explicitly enable the server
-# by passing the PHX_SERVER=true when you start it:
-#
-#     PHX_SERVER=true bin/lanternhall start
-#
-# Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
-# script that automatically sets the env var above.
 # Install config (SPEC-platform.md section 3.1), validated here so a bad value stops
 # boot before any app starts. Dev and test default to the synthetic personal example,
 # so they never read a real install's config.
@@ -34,6 +21,7 @@ install = Lanternhall.Platform.Config.load!(install_env, Lanternhall.Platform.Fe
 
 config :lanternhall, :install, install
 
+# A release serves HTTP only when asked to: `PHX_SERVER=true bin/lanternhall start`.
 if System.get_env("PHX_SERVER") do
   config :lanternhall, LanternhallWeb.Endpoint, server: true
 end
@@ -65,11 +53,8 @@ if config_env() == :prod do
     database: database_path,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
 
-  # The secret key base is used to sign/encrypt cookies and other secrets.
-  # A default value is used in config/dev.exs and config/test.exs but you
-  # want to use a different value for prod and you most likely don't want
-  # to check this value into version control, so we use an environment
-  # variable instead.
+  # Signs and encrypts cookies. Dev and test use the fixed values in their config
+  # files; prod reads its own from the environment, so it is never committed.
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
       raise """

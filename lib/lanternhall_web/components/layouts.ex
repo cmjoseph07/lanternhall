@@ -1,22 +1,17 @@
 defmodule LanternhallWeb.Layouts do
   @moduledoc """
-  This module holds layouts and related functionality
-  used by your application.
+  The root document, the layout every page renders in, and the pieces of that
+  layout: flashes, the theme toggle and the logo.
   """
   use LanternhallWeb, :html
 
-  # Embed all files in layouts/* within this module.
-  # The default root.html.heex file contains the HTML
-  # skeleton of your application, namely HTML headers
-  # and other static content.
+  # `root/1` comes from layouts/root.html.heex: the document around every page.
   embed_templates "layouts/*"
 
   @doc """
-  Renders your app layout.
+  Renders the layout around a page: the top bar, the page's content and its flashes.
 
-  This function is typically invoked from every template,
-  and it often contains your application menu, sidebar,
-  or similar.
+  Every LiveView template starts with it.
 
   ## Examples
 
@@ -26,11 +21,6 @@ defmodule LanternhallWeb.Layouts do
 
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
-
-  attr :current_scope, :map,
-    default: nil,
-    doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
-
   slot :inner_block, required: true
 
   def app(assigns) do

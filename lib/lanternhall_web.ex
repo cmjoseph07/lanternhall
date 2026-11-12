@@ -1,23 +1,16 @@
 defmodule LanternhallWeb do
   @moduledoc """
-  The entrypoint for defining your web interface, such
-  as controllers, components, live views, and so on.
-
-  This can be used in your application as:
+  What the router and every controller, component and LiveView start from:
 
       use LanternhallWeb, :controller
       use LanternhallWeb, :html
 
-  The definitions below will be executed for every controller,
-  component, etc, so keep them short and clean, focused
-  on imports, uses and aliases.
-
-  Do NOT define functions inside the quoted expressions
-  below. Instead, define additional modules and import
-  those modules here.
+  Each function below returns the quoted code that `use` injects into the caller,
+  so it runs once per module. Keep them to imports, uses and aliases; a function
+  belongs in a module of its own, imported here.
   """
 
-  def static_paths, do: ~w(assets fonts images manifest.webmanifest robots.txt)
+  def static_paths, do: ~w(assets images manifest.webmanifest robots.txt)
 
   def router do
     quote do
