@@ -158,6 +158,21 @@ defmodule Lanternhall.Platform.ConfigTest do
                 ]}
     end
 
+    test "a file with other keys and no install block names both", %{tmp_dir: tmp_dir} do
+      body = """
+      config :lanternhall, :repo, []
+      config :logger, level: :debug
+      """
+
+      assert tmp_dir |> write_config(body) |> Config.check(@home, @features) ==
+               {:error,
+                [
+                  {:install, "is missing; the file must set config :lanternhall, :install"},
+                  {:repo, "is not allowed; the file holds only config :lanternhall, :install"},
+                  {:logger, "is not allowed; the file holds only config :lanternhall, :install"}
+                ]}
+    end
+
     test "an install block that is not a keyword list names :install", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "config :lanternhall, :install, \"personal\"\n")
 

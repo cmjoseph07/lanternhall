@@ -153,15 +153,16 @@ defmodule Lanternhall.Platform.Config do
           key <- if(app == :lanternhall, do: Keyword.keys(entries) -- [:install], else: [app]),
           do: {key, "is not allowed; the file holds only config :lanternhall, :install"}
 
-    case {get_in(configs, [:lanternhall, :install]), others} do
-      {nil, []} ->
-        {:error, [{:install, "is missing; the file must set config :lanternhall, :install"}]}
+    install = get_in(configs, [:lanternhall, :install])
 
-      {install, []} ->
-        {:ok, install}
+    missing =
+      if install == nil,
+        do: [{:install, "is missing; the file must set config :lanternhall, :install"}],
+        else: []
 
-      {_, others} ->
-        {:error, others}
+    case missing ++ others do
+      [] -> {:ok, install}
+      errors -> {:error, errors}
     end
   end
 
