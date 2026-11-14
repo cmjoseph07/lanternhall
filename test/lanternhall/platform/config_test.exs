@@ -403,6 +403,28 @@ defmodule Lanternhall.Platform.ConfigTest do
       assert Config.path(env) == {:ok, "/home/someone/.config/lanternhall/config.exs"}
     end
 
+    test "refuses a relative HOME, or a \"..\" segment in the variable it would use" do
+      for {env, error} <- [
+            {%{"HOME" => "rel"}, {"HOME", ~s(must be an absolute path, got "rel")}},
+            {%{"HOME" => "/home/../x"},
+             {"HOME", ~s(must not contain a ".." segment, got "/home/../x")}},
+            {Map.put(@home, "XDG_CONFIG_HOME", "/x/../y"),
+             {"XDG_CONFIG_HOME", ~s(must not contain a ".." segment, got "/x/../y")}}
+          ] do
+        assert Config.path(env) == {:error, [error]}
+      end
+    end
+
+    test "LANTERNHALL_CONFIG wins before the other variables are looked at" do
+      env = %{
+        "LANTERNHALL_CONFIG" => "/etc/lh.exs",
+        "HOME" => "rel",
+        "XDG_CONFIG_HOME" => "/x/.."
+      }
+
+      assert Config.path(env) == {:ok, "/etc/lh.exs"}
+    end
+
     test "has no default without HOME" do
       for env <- [%{}, %{"HOME" => "", "XDG_CONFIG_HOME" => "rel"}] do
         assert Config.path(env) ==

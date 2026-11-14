@@ -41,7 +41,8 @@ defmodule Lanternhall.Platform.Config do
 
   @doc """
   The config file path: `LANTERNHALL_CONFIG`, else `$XDG_CONFIG_HOME/lanternhall/config.exs`,
-  else `~/.config/lanternhall/config.exs`. Empty or relative XDG variables are ignored.
+  else `~/.config/lanternhall/config.exs`. Empty or relative XDG variables are ignored;
+  a relative `HOME`, or a ".." segment in the variable used, is an error.
   """
   @spec path(env()) :: {:ok, Path.t()} | {:error, [error()]}
   def path(env) do
@@ -50,10 +51,10 @@ defmodule Lanternhall.Platform.Config do
         {:ok, Path.expand(env["LANTERNHALL_CONFIG"])}
 
       absolute?(env["XDG_CONFIG_HOME"]) ->
-        {:ok, Path.join([env["XDG_CONFIG_HOME"], "lanternhall", "config.exs"])}
+        default_path(env, "XDG_CONFIG_HOME", ["lanternhall", "config.exs"])
 
       present?(env["HOME"]) ->
-        {:ok, Path.join([env["HOME"], ".config", "lanternhall", "config.exs"])}
+        default_path(env, "HOME", [".config", "lanternhall", "config.exs"])
 
       true ->
         {:error,
@@ -112,6 +113,14 @@ defmodule Lanternhall.Platform.Config do
   @doc "The config stored at boot."
   @spec get() :: t()
   def get, do: :persistent_term.get(@persistent_term_key)
+
+  # A default path, built on the directory an environment variable names.
+  defp default_path(env, variable, rest) do
+    case path_problem(env[variable]) do
+      nil -> {:ok, Path.join([env[variable] | rest])}
+      reason -> {:error, [{variable, reason}]}
+    end
+  end
 
   defp read(path) do
     cond do
@@ -279,18 +288,10 @@ defmodule Lanternhall.Platform.Config do
   defp validate_value(:time_zone, zone),
     do: {:error, "must be a time zone name such as \"Europe/London\", got #{inspect(zone)}"}
 
-  # Refused, not resolved: the path is used as written, and resolving ".." in text can name
-  # a different directory than the OS reaches when a symlink comes before it.
   defp validate_value(:data_dir, dir) do
-    cond do
-      not absolute?(dir) ->
-        {:error, "must be an absolute path, got #{inspect(dir)}"}
-
-      ".." in Path.split(dir) ->
-        {:error, "must not contain a \"..\" segment, got #{inspect(dir)}"}
-
-      true ->
-        {:ok, dir}
+    case path_problem(dir) do
+      nil -> {:ok, dir}
+      reason -> {:error, reason}
     end
   end
 
@@ -299,6 +300,17 @@ defmodule Lanternhall.Platform.Config do
       absolute?(env["XDG_DATA_HOME"]) -> {:ok, Path.join(env["XDG_DATA_HOME"], "lanternhall")}
       present?(env["HOME"]) -> {:ok, Path.join([env["HOME"], ".local", "share", "lanternhall"])}
       true -> {:error, "has no default because HOME is not set; set data_dir"}
+    end
+  end
+
+  # Why a path cannot be used as written, or nil. ".." is refused, not resolved: resolving
+  # it in text can name a different directory than the OS reaches when a symlink comes
+  # before it.
+  defp path_problem(path) do
+    cond do
+      not absolute?(path) -> "must be an absolute path, got #{inspect(path)}"
+      ".." in Path.split(path) -> "must not contain a \"..\" segment, got #{inspect(path)}"
+      true -> nil
     end
   end
 
