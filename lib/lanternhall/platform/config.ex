@@ -264,7 +264,7 @@ defmodule Lanternhall.Platform.Config do
 
   defp validate_value(:modules, modules) do
     cond do
-      not (is_list(modules) and Enum.all?(modules, &is_atom/1)) ->
+      not (is_list(modules) and not List.improper?(modules) and Enum.all?(modules, &is_atom/1)) ->
         {:error, "must be a list of module ids (atoms), got #{inspect(modules)}"}
 
       duplicate = List.first(modules -- Enum.uniq(modules)) ->

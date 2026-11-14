@@ -217,7 +217,7 @@ defmodule Lanternhall.Platform.ConfigTest do
     end
 
     test "modules must be a list of atoms", %{tmp_dir: tmp_dir} do
-      for modules <- [:habits, ["habits"], [:habits, "learning"]] do
+      for modules <- [:habits, ["habits"], [:habits, "learning"], [:habits | :learning]] do
         install = Keyword.put(valid_install(), :modules, modules)
 
         assert errors_for(tmp_dir, install) == [
