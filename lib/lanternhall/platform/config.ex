@@ -234,7 +234,11 @@ defmodule Lanternhall.Platform.Config do
   defp validate_feature_key(validator, [value]), do: validator.({:ok, value})
 
   defp validate_key(_key, [_, _ | _], _env), do: {:error, "is set more than once"}
-  defp validate_key(:data_dir, [], env), do: default_data_dir(env)
+
+  defp validate_key(:data_dir, [], env) do
+    with {:ok, dir} <- default_data_dir(env), do: validate_value(:data_dir, dir)
+  end
+
   defp validate_key(_key, [], _env), do: {:error, "is required"}
   defp validate_key(key, [value], _env), do: validate_value(key, value)
 
@@ -274,10 +278,19 @@ defmodule Lanternhall.Platform.Config do
   defp validate_value(:time_zone, zone),
     do: {:error, "must be a time zone name such as \"Europe/London\", got #{inspect(zone)}"}
 
+  # Refused, not resolved: the path is used as written, and resolving ".." in text can name
+  # a different directory than the OS reaches when a symlink comes before it.
   defp validate_value(:data_dir, dir) do
-    if absolute?(dir),
-      do: {:ok, dir},
-      else: {:error, "must be an absolute path, got #{inspect(dir)}"}
+    cond do
+      not absolute?(dir) ->
+        {:error, "must be an absolute path, got #{inspect(dir)}"}
+
+      ".." in Path.split(dir) ->
+        {:error, "must not contain a \"..\" segment, got #{inspect(dir)}"}
+
+      true ->
+        {:ok, dir}
+    end
   end
 
   defp default_data_dir(env) do

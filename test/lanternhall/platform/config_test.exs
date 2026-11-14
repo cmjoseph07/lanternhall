@@ -242,6 +242,35 @@ defmodule Lanternhall.Platform.ConfigTest do
       end
     end
 
+    test "data_dir must not contain a \"..\" segment", %{tmp_dir: tmp_dir} do
+      for data_dir <- ["/srv/../etc", "/srv/data/..", "/../srv"] do
+        install = Keyword.put(valid_install(), :data_dir, data_dir)
+
+        assert errors_for(tmp_dir, install) == [
+                 {:data_dir, "must not contain a \"..\" segment, got #{inspect(data_dir)}"}
+               ]
+      end
+    end
+
+    test "data_dir may have dots inside a segment's name", %{tmp_dir: tmp_dir} do
+      for data_dir <- ["/srv/..data", "/srv/data..", "/srv/a..b/.hidden"] do
+        path = write_install(tmp_dir, Keyword.put(valid_install(), :data_dir, data_dir))
+        assert {:ok, %Config{data_dir: ^data_dir}} = Config.check(path, @home, @features)
+      end
+    end
+
+    test "the default data_dir passes the same checks", %{tmp_dir: tmp_dir} do
+      for {env, reason} <- [
+            {Map.put(@home, "XDG_DATA_HOME", "/xdg/../data"),
+             ~s(must not contain a ".." segment, got "/xdg/../data/lanternhall")},
+            {%{"HOME" => "/home/../x"},
+             ~s(must not contain a ".." segment, got "/home/../x/.local/share/lanternhall")},
+            {%{"HOME" => "rel"}, ~s(must be an absolute path, got "rel/.local/share/lanternhall")}
+          ] do
+        assert errors_for(tmp_dir, valid_install(), env) == [{:data_dir, reason}]
+      end
+    end
+
     test "data_dir has no default without HOME", %{tmp_dir: tmp_dir} do
       assert errors_for(tmp_dir, valid_install(), %{}) == [
                {:data_dir, "has no default because HOME is not set; set data_dir"}
