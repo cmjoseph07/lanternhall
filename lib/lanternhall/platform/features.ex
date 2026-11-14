@@ -8,11 +8,15 @@ defmodule Lanternhall.Platform.Features do
   stored in `Lanternhall.Platform.Config` at boot, and everything a feature contributes is
   read from that set only, so a disabled feature contributes nothing.
 
-  Problems are data, like the config's own: `{:features, reason}` for a broken registry
-  (a code problem) and `{:modules, reason}` for an install that enables the wrong modules.
+  Problems are data, like the config's own: `{"the feature registry", reason}` for a broken
+  registry (a code problem, so it is named as the registry and not as an install key) and
+  `{:modules, reason}` for an install that enables the wrong modules.
   """
 
   alias Lanternhall.Platform.{Config, Feature}
+
+  # How a registry problem is named in an error line; an atom would print as an install key.
+  @registry "the feature registry"
 
   @doc "Every feature implementation, in the order `config/config.exs` lists them."
   @spec all() :: [module()]
@@ -37,7 +41,7 @@ defmodule Lanternhall.Platform.Features do
 
     case problems do
       [] -> :ok
-      problems -> {:error, Enum.map(problems, &{:features, &1})}
+      problems -> {:error, Enum.map(problems, &{@registry, &1})}
     end
   end
 

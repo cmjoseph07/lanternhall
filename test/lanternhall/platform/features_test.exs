@@ -63,13 +63,13 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([Core, Invalid.BadShapes]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    ~s(has Lanternhall.Fixtures.Features.Invalid.BadShapes.id/0 return "fixture_bad_shapes"; it must be an atom)},
-                  {:features,
+                  {"the feature registry",
                    "has Lanternhall.Fixtures.Features.Invalid.BadShapes.kind/0 return :home; it must be :core, :personal or :work"},
-                  {:features,
+                  {"the feature registry",
                    "has Lanternhall.Fixtures.Features.Invalid.BadShapes.depends_on/0 return :fixture_core; it must be a list of feature ids"},
-                  {:features,
+                  {"the feature registry",
                    "has Lanternhall.Fixtures.Features.Invalid.BadShapes.config_keys/0 return [fixture_bad: :not_a_function]; it must be a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"}
                 ]}
     end
@@ -78,13 +78,14 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([Invalid.BareConfigKey]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "has Lanternhall.Fixtures.Features.Invalid.BareConfigKey.config_keys/0 return [:fixture_bare]; it must be a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"}
                 ]}
     end
 
     test "refuses improper lists from depends_on/0 and config_keys/0" do
-      assert {:error, [{:features, depends_on}, {:features, config_keys}]} =
+      assert {:error,
+              [{"the feature registry", depends_on}, {"the feature registry", config_keys}]} =
                Features.validate([Invalid.ImproperLists])
 
       assert depends_on =~ "depends_on/0 return [:fixture_core | :tail]; it must be a list"
@@ -95,9 +96,9 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([PlatformFeature, String, :no_such_module]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "lists String, which does not implement Lanternhall.Platform.Feature"},
-                  {:features,
+                  {"the feature registry",
                    "lists :no_such_module, which does not implement Lanternhall.Platform.Feature"}
                 ]}
     end
@@ -106,7 +107,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([Core, Invalid.DuplicateCore]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "gives id :fixture_core to both Lanternhall.Fixtures.Features.Core and Lanternhall.Fixtures.Features.Invalid.DuplicateCore"}
                 ]}
     end
@@ -115,7 +116,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([Core, Invalid.UnknownDependency]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "has :fixture_orphan depend on :fixture_missing, which is not a feature"}
                 ]}
     end
@@ -124,7 +125,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([Core, Personal, Invalid.CoreOnOptional]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "has :core feature :fixture_core_on_optional depend on :personal feature :fixture_personal; a feature may depend only on :core features and features of its own kind"}
                 ]}
     end
@@ -135,7 +136,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate(registry) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "has :personal feature :fixture_personal_on_work depend on :work feature :fixture_work; a feature may depend only on :core features and features of its own kind"}
                 ]}
     end
@@ -152,7 +153,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
              ]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "has a dependency cycle: :fixture_cycle_a -> :fixture_cycle_b -> :fixture_cycle_c -> :fixture_cycle_a"}
                 ]}
     end
@@ -161,9 +162,9 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert Features.validate([Core, Personal, Invalid.KeyClash]) ==
                {:error,
                 [
-                  {:features,
+                  {"the feature registry",
                    "has :fixture_key_clash claim config key :port, which platform owns"},
-                  {:features,
+                  {"the feature registry",
                    "has :fixture_key_clash claim config key :fixture_greeting, which :fixture_personal owns"}
                 ]}
     end

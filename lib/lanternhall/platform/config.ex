@@ -12,7 +12,8 @@ defmodule Lanternhall.Platform.Config do
 
   Problems are data until that single raise: `path/1` and `check/3` return
   `{:error, [{key, reason}]}`, where `key` is the config key, the environment variable
-  to set, or the file path for problems with the file itself.
+  to set, the file path for problems with the file itself, or "the feature registry" for
+  problems with the registry.
   """
 
   alias Lanternhall.Platform.Features
