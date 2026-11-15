@@ -1,5 +1,6 @@
 defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
-  use LanternhallWeb.ConnCase, async: true
+  # Not async: one test swaps the install config stored for the whole node.
+  use LanternhallWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
@@ -10,6 +11,10 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
     setup %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/settings")
       {:ok, view: view, config: Config.get()}
+    end
+
+    test "is titled Settings, followed by the app name", %{view: view} do
+      assert page_title(view) == "Settings · Lanternhall"
     end
 
     test "shows the install config stored at boot", %{view: view, config: config} do
@@ -50,6 +55,22 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
     end
   end
 
+  # What a prod install shows: the server listens on the port its config names.
+  describe "the page on a server that uses the configured port" do
+    setup do
+      config = Config.get()
+      store(%{config | port: LanternhallWeb.Endpoint.config(:http)[:port]})
+      on_exit(fn -> store(config) end)
+    end
+
+    test "shows the port without the note about another one", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/settings")
+
+      assert has_element?(view, "#install-port", "4002")
+      refute has_element?(view, "#install-serving-port")
+    end
+  end
+
   describe "format_uptime/1" do
     test "reads in the largest two units" do
       assert InstallLive.format_uptime(0) == "under a minute"
@@ -61,5 +82,11 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
       assert InstallLive.format_uptime(:timer.hours(24)) == "1 d 0 h"
       assert InstallLive.format_uptime(:timer.hours(24 * 9 + 3) + 1) == "9 d 3 h"
     end
+  end
+
+  # Stores `config` the way boot does: through the app env, into `Config.get/0`.
+  defp store(config) do
+    Application.put_env(:lanternhall, :install, config)
+    Config.take_from_app_env()
   end
 end

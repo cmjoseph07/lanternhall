@@ -11,6 +11,12 @@ defmodule LanternhallWeb.Platform.LandingLiveTest do
     assert has_element?(view, "#home-note", "Home arrives later")
   end
 
+  test "is titled Landing, followed by the app name", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    assert page_title(view) == "Landing · Lanternhall"
+  end
+
   test "shows the install kind, which test boots with from the personal example", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/")
 
