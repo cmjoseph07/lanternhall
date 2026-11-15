@@ -57,6 +57,18 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  # A value no version of the toggle writes, such as one left by an older build.
+  test "an unknown stored theme renders dark from the first frame", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> Playwright.evaluate(~s|localStorage.setItem("phx:theme", "sepia")|)
+    |> visit(~p"/")
+    |> assert_first_frame(@dark)
+    |> assert_has("[data-phx-main].phx-connected")
+    |> assert_pressed("dark")
+    |> assert_clean_browser()
+  end
+
   test "a light choice survives reload with no dark frame, and dark survives with no light frame",
        %{conn: conn} do
     conn
@@ -172,6 +184,22 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  # On rejoining, LiveView patches the page to the server's render, which marks no
+  # button as pressed.
+  test "the pressed button survives losing and regaining the connection", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> choose_theme("light")
+    |> assert_pressed("light")
+    |> Playwright.evaluate("window.liveSocket.disconnect()")
+    |> assert_has("[data-phx-main].phx-client-error")
+    |> Playwright.evaluate("window.liveSocket.connect()")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> assert_pressed("light")
+    |> assert_clean_browser()
+  end
+
   # The page's expected error is also written to the test log; show it only on failure.
   @tag :capture_log
   test "with site storage blocked the page still renders its theme from the first frame",
@@ -235,6 +263,13 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
       ~s|[...document.querySelectorAll("#theme-toggle button")].map((b) => b.getAttribute("aria-label"))|,
       fn labels -> assert labels == ["System theme", "Light theme", "Dark theme"] end
     )
+  end
+
+  test "the toggle is a group named Theme for screen readers", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> assert_has("#theme-toggle[role=group][aria-label=Theme]")
+    |> assert_clean_browser()
   end
 
   # WCAG 2.2 AA 1.4.3: text needs 4.5:1 against what it sits on. Each pair is
