@@ -1,6 +1,8 @@
 defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
-  # Not async: Mix.shell/1 is process-wide.
+  # Not async: Mix.shell/1 and the captured stderr are process-wide.
   use ExUnit.Case, async: false
+
+  import ExUnit.CaptureIO
 
   alias Mix.Tasks.Lanternhall.Config.Check
 
@@ -33,6 +35,37 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
            lanternhall config: :modules is required
            lanternhall config: :time_zone is required\
            """
+  end
+
+  # What the terminal shows: the compiler's own multi-line report must not come with it.
+  test "prints a compile error as its one line and nothing else", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "config.exs")
+    File.write!(path, "import Config\nconfig :lanternhall, :install,\n  kind: personal\n")
+
+    stderr = capture_io(:stderr, fn -> assert catch_exit(Check.run([path])) == {:shutdown, 1} end)
+
+    assert stderr == ""
+    assert_received {:mix_shell, :error, [message]}
+
+    assert message ==
+             ~s(lanternhall config: #{path} could not be read: line 3: undefined variable "personal")
+  end
+
+  # A warning is not a problem with the file, so it is still shown, as Elixir shows it.
+  test "still shows a warning from a file that is valid", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "config.exs")
+
+    File.write!(path, """
+    import Config
+    IO.warn("check this value")
+    config :lanternhall, :install, kind: :personal, port: 4100, modules: [], time_zone: "UTC"
+    """)
+
+    stderr = capture_io(:stderr, fn -> assert Check.run([path]) == :ok end)
+
+    assert stderr =~ "warning: check this value"
+    assert_received {:mix_shell, :info, [message]}
+    assert message == "lanternhall config: #{path} is valid (:personal install)"
   end
 
   test "checks modules against the feature registry", %{tmp_dir: tmp_dir} do

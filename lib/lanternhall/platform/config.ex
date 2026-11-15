@@ -155,11 +155,40 @@ defmodule Lanternhall.Platform.Config do
     end
   end
 
+  # The compiler reports an undefined variable or function as a diagnostic, then raises
+  # an error that says only "cannot compile file (errors have been logged)". Capturing the
+  # diagnostics keeps its multi-line report off stderr and gives each error a line here.
+  # Warnings are not problems with the file, so they are printed as Elixir prints them.
   defp read_file(path) do
-    {:ok, Config.Reader.read!(path)}
-  rescue
-    error -> {:error, [{path, "could not be read: " <> one_line(Exception.message(error))}]}
+    {result, diagnostics} =
+      Code.with_diagnostics(fn ->
+        try do
+          {:ok, Config.Reader.read!(path)}
+        rescue
+          error -> {:error, error}
+        end
+      end)
+
+    {compile_errors, warnings} = Enum.split_with(diagnostics, &(&1.severity == :error))
+    Enum.each(warnings, &Code.print_diagnostic/1)
+
+    case {result, compile_errors} do
+      {{:ok, configs}, _} ->
+        {:ok, configs}
+
+      {{:error, error}, []} ->
+        {:error, [{path, "could not be read: " <> one_line(Exception.message(error))}]}
+
+      {{:error, _error}, compile_errors} ->
+        {:error,
+         for %{message: message, position: position} <- compile_errors do
+           {path, "could not be read: line #{line(position)}: #{one_line(message)}"}
+         end}
+    end
   end
+
+  defp line({line, _column}), do: line
+  defp line(line), do: line
 
   # Compiler messages span several lines with a source excerpt; keep only the prose.
   defp one_line(message) do

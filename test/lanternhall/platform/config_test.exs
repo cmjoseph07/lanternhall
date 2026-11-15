@@ -149,6 +149,39 @@ defmodule Lanternhall.Platform.ConfigTest do
                 ]}
     end
 
+    # The compiler reports these as diagnostics; the exception it then raises says only
+    # "cannot compile file (errors have been logged)".
+    test "an atom written without its colon gives one line naming the line and the variable",
+         %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, "config :lanternhall, :install,\n  kind: personal\n")
+
+      assert Config.check(path, @home, @features) ==
+               {:error, [{path, ~s(could not be read: line 4: undefined variable "personal")}]}
+    end
+
+    test "a file without import Config gives one line naming the line and the call",
+         %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "config.exs")
+      File.write!(path, "config :lanternhall, :install, #{inspect(valid_install())}\n")
+
+      assert Config.check(path, @home, @features) ==
+               {:error,
+                [
+                  {path,
+                   "could not be read: line 1: undefined function config/3 (there is no such import)"}
+                ]}
+    end
+
+    # The compiler gives a position as a line or as {line, column}; code parsed with
+    # columns is the way to get the second form from a config file.
+    test "a compile error reported with a column still names its line", %{tmp_dir: tmp_dir} do
+      body = ~s|Code.eval_quoted(Code.string_to_quoted!("personal", columns: true))\n|
+      path = write_config(tmp_dir, body)
+
+      assert Config.check(path, @home, @features) ==
+               {:error, [{path, ~s(could not be read: line 1: undefined variable "personal")}]}
+    end
+
     test "a file without the install block names :install", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "")
 
