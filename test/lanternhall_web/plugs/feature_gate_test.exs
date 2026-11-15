@@ -24,6 +24,26 @@ defmodule LanternhallWeb.Plugs.FeatureGateTest do
     {response.status, response.headers["content-type"], Map.keys(response.headers), response.body}
   end
 
+  # The reply the tests below compare a disabled feature's routes with, pinned here so
+  # they cannot all change together unnoticed.
+  describe "a URL with no route" do
+    test "answers 404 with the status message as HTML" do
+      response = get("/no-such-page")
+
+      assert response.status == 404
+      assert response.headers["content-type"] == ["text/html; charset=utf-8"]
+      assert response.body == "Not Found"
+    end
+
+    test "answers 404 with the status message as JSON to a client that asks for JSON" do
+      response = get("/no-such-page", "application/json")
+
+      assert response.status == 404
+      assert response.headers["content-type"] == ["application/json; charset=utf-8"]
+      assert Jason.decode!(response.body) == %{"errors" => %{"detail" => "Not Found"}}
+    end
+  end
+
   test "an enabled feature's plain route responds" do
     response = get("/fixtures/core/plain")
 
