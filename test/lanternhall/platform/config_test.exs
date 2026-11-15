@@ -135,6 +135,20 @@ defmodule Lanternhall.Platform.ConfigTest do
       refute reason =~ "\n"
     end
 
+    # The file is Elixir, so it can fail while it runs, not only while it is parsed.
+    test "a file that raises when evaluated gives one line naming the path and the error",
+         %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, ~s|System.fetch_env!("LANTERNHALL_NO_SUCH_VARIABLE")\n|)
+
+      assert Config.check(path, @home, @features) ==
+               {:error,
+                [
+                  {path,
+                   "could not be read: could not fetch environment variable " <>
+                     "\"LANTERNHALL_NO_SUCH_VARIABLE\" because it is not set"}
+                ]}
+    end
+
     test "a file without the install block names :install", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "")
 
@@ -184,6 +198,11 @@ defmodule Lanternhall.Platform.ConfigTest do
   describe "check/3 per key" do
     test "an unknown key is refused by name", %{tmp_dir: tmp_dir} do
       install = valid_install() ++ [modlues: [:habits]]
+      assert errors_for(tmp_dir, install) == [{:modlues, "is not a known key"}]
+    end
+
+    test "an unknown key written twice is named once", %{tmp_dir: tmp_dir} do
+      install = valid_install() ++ [modlues: [:habits], modlues: []]
       assert errors_for(tmp_dir, install) == [{:modlues, "is not a known key"}]
     end
 
@@ -286,10 +305,12 @@ defmodule Lanternhall.Platform.ConfigTest do
       end
     end
 
-    test "data_dir has no default without HOME", %{tmp_dir: tmp_dir} do
-      assert errors_for(tmp_dir, valid_install(), %{}) == [
-               {:data_dir, "has no default because HOME is not set; set data_dir"}
-             ]
+    test "data_dir has no default without HOME, unset or empty", %{tmp_dir: tmp_dir} do
+      for env <- [%{}, %{"HOME" => ""}] do
+        assert errors_for(tmp_dir, valid_install(), env) == [
+                 {:data_dir, "has no default because HOME is not set; set data_dir"}
+               ]
+      end
     end
 
     test "every problem is reported at once, in key order", %{tmp_dir: tmp_dir} do
@@ -305,13 +326,17 @@ defmodule Lanternhall.Platform.ConfigTest do
   end
 
   describe "check/3 with the feature registry" do
-    test "a module on the wrong kind of install is named with the install kind",
-         %{tmp_dir: tmp_dir} do
-      install = Keyword.put(valid_install(), :modules, [:fixture_work])
+    for {kind, module} <- [personal: :fixture_work, work: :fixture_personal] do
+      test "a #{inspect(module)} module on a #{inspect(kind)} install is named with the install kind",
+           %{tmp_dir: tmp_dir} do
+        install = Keyword.merge(valid_install(), kind: unquote(kind), modules: [unquote(module)])
 
-      assert errors_for(tmp_dir, install) == [
-               {:modules, "contains :fixture_work, which is not allowed on a :personal install"}
-             ]
+        assert errors_for(tmp_dir, install) == [
+                 {:modules,
+                  "contains #{inspect(unquote(module))}, which is not allowed on a " <>
+                    "#{inspect(unquote(kind))} install"}
+               ]
+      end
     end
 
     test "a module whose dependency is disabled is named with the dependency",
