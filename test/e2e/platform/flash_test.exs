@@ -1,9 +1,11 @@
 defmodule LanternhallWeb.E2E.Platform.FlashTest do
   # Flashes stack in one column below the top bar, right-aligned with its controls, so
   # none hides another or the top bar, at the widths the pixel check uses
-  # (SPEC-platform.md section 8). A screen reader hears each one once.
+  # (SPEC-platform.md section 8). A screen reader hears each one once. Close dismisses
+  # one flash, and the two reconnect notices show only while the page is cut off.
   use LanternhallWeb.E2ECase
 
+  alias Phoenix.LiveView.Debug
   alias PhoenixTest.Playwright
 
   # Each visible part's box once animations finish, as [left, top, right, bottom].
@@ -76,6 +78,95 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
                )
     end)
     |> assert_clean_browser()
+  end
+
+  # Resolves once the server's next render has taken the closed flash out of the page,
+  # with the flashes still in it. Hiding it in the browser alone never resolves this.
+  @flashes_after_close """
+  (closed) => new Promise((resolve) => {
+    const group = document.getElementById("flash-group");
+    const settle = () => {
+      if (group.querySelector(closed)) return false;
+      resolve(["#flash-info", "#flash-error"].filter((selector) => group.querySelector(selector)));
+      return true;
+    };
+    if (settle()) return;
+    new MutationObserver((_records, observer) => settle() && observer.disconnect())
+      .observe(group, { childList: true });
+  })
+  """
+
+  for {closed, kept} <- [{"#flash-info", "#flash-error"}, {"#flash-error", "#flash-info"}] do
+    test "Close on #{closed} dismisses it and leaves #{kept}", %{conn: conn} do
+      conn
+      |> visit(~p"/fixtures/core?flashes")
+      |> assert_has("[data-phx-main].phx-connected")
+      |> Playwright.click("#{unquote(closed)} button[aria-label=Close]")
+      |> refute_has(unquote(closed))
+      |> Playwright.evaluate(
+        @flashes_after_close,
+        [is_function: true, arg: unquote(closed)],
+        fn flashes -> assert flashes == [unquote(kept)] end
+      )
+      |> assert_has(unquote(kept))
+      |> assert_clean_browser()
+    end
+  end
+
+  test "the client notice shows while the socket is down and goes when it is back",
+       %{conn: conn} do
+    conn
+    |> visit(~p"/fixtures/core")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> refute_has("#client-error")
+    |> Playwright.evaluate("window.liveSocket.disconnect()")
+    |> assert_has("#client-error")
+    |> refute_has("#server-error")
+    |> Playwright.evaluate("window.liveSocket.connect()")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> refute_has("#client-error")
+    |> assert_clean_browser()
+  end
+
+  # The page rejoins by itself about half a second after the notice shows, too short to
+  # catch by polling, so the page records each change of the notice's `hidden` attribute.
+  @watch_server_notice """
+  void (window.__serverNotice = new Promise((resolve) => {
+    const notice = document.getElementById("server-error");
+    const log = [];
+    new MutationObserver(() => {
+      log.push(notice.hidden ? "hidden" : "shown");
+      if (notice.hidden) resolve(log);
+    }).observe(notice, { attributes: true, attributeFilter: ["hidden"] });
+  }))
+  """
+
+  test "the server notice shows when the page's process dies and goes once it has rejoined",
+       %{conn: conn} do
+    conn
+    |> visit(~p"/fixtures/core")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> refute_has("#server-error")
+    |> Playwright.evaluate(@watch_server_notice)
+    |> kill_live_view()
+    # The client waits a second before it rejoins, half of the default timeout.
+    |> Playwright.evaluate("window.__serverNotice", [timeout: 5_000], fn log ->
+      assert log == ["shown", "hidden"]
+    end)
+    |> assert_has("[data-phx-main].phx-connected")
+    |> refute_has("#server-error")
+    |> refute_has("#client-error")
+    |> assert_clean_browser()
+  end
+
+  # Kills the LiveView process behind the page, as a crash would; the socket stays up.
+  defp kill_live_view(conn) do
+    Playwright.evaluate(conn, "document.querySelector('[data-phx-main]').id", fn id ->
+      [%{pid: pid}] =
+        Enum.filter(Debug.list_liveviews(), &(&1.topic == "lv:" <> id))
+
+      Process.exit(pid, :kill)
+    end)
   end
 
   defp overlap?([l1, t1, r1, b1], [l2, t2, r2, b2]),
