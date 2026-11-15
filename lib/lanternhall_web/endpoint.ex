@@ -3,6 +3,7 @@ defmodule LanternhallWeb.Endpoint do
 
   alias LanternhallWeb.Plugs.HostCheck
   alias LanternhallWeb.Plugs.SecurityHeaders
+  alias Plug.Conn.WrapperError
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
@@ -41,7 +42,26 @@ defmodule LanternhallWeb.Endpoint do
     # Once the Host check has answered, the request ends here. Phoenix would stop on the
     # halted conn too (its socket transport and plug pipeline both skip one), so this is
     # a second layer and no test can tell it apart; it keeps the boundary explicit.
-    if conn.halted, do: conn, else: super(conn, opts)
+    if conn.halted do
+      conn
+    else
+      # Phoenix renders an error on the conn it gave `call/2`, which has none of the
+      # headers set above, unless the error arrives wrapped with a conn of its own. The
+      # router wraps the errors it raises; this wraps the rest (an endpoint plug refusing
+      # the request, or an exit or throw from anywhere), so error responses carry the
+      # headers too.
+      try do
+        super(conn, opts)
+      catch
+        kind, reason when not is_struct(reason, WrapperError) ->
+          WrapperError.reraise(%WrapperError{
+            conn: conn,
+            kind: kind,
+            reason: reason,
+            stack: __STACKTRACE__
+          })
+      end
+    end
   end
 
   # Serve at "/" the static files from "priv/static" directory.

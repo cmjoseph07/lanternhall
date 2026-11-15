@@ -4,11 +4,14 @@ defmodule Lanternhall.Fixtures.Features.CoreLive do
   the disabled `:fixture_personal` feature's page to prove live navigation into it.
 
   With `?flashes` it shows an info and an error flash, so browser tests can measure how
-  flashes render.
+  flashes render. With `?exit` it exits instead of rendering, as a page does when a call
+  to another process times out.
   """
   use LanternhallWeb, :live_view
 
   @impl true
+  def handle_params(%{"exit" => _}, _uri, _socket), do: exit(:fixture_exit)
+
   def handle_params(params, _uri, socket) do
     socket =
       if Map.has_key?(params, "flashes") do

@@ -2,6 +2,7 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
   use LanternhallWeb.ConnCase
 
   alias LanternhallWeb.Plugs.SecurityHeaders
+  alias LanternhallWeb.RawHTTP
 
   # SPEC-platform.md section 3.3, character for character; only the nonce varies.
   @csp ~r/\Adefault-src 'none'; script-src 'self' 'nonce-(?<nonce>[A-Za-z0-9+\/]{22}==)'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'\z/
@@ -72,6 +73,40 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       conn = conn |> SecurityHeaders.call(SecurityHeaders.init([])) |> send_resp(500, "")
 
       assert_security_headers(conn)
+    end
+
+    # Real requests to the running test server. Each fails outside the router's own error
+    # handling: in an endpoint plug before the router runs, or as an exit, which the
+    # router passes on as it is.
+    for {why, request_line, headers, body, status} <- [
+          {"a JSON body that does not parse", "POST /healthz HTTP/1.1",
+           [{"content-type", "application/json"}, {"content-length", "1"}], "{", 400},
+          {"a query string that is not UTF-8", "GET /?a=%ff HTTP/1.1", [], "", 400},
+          {"a static path that climbs out of its directory", "GET /images/..%2fx HTTP/1.1", [],
+           "", 400},
+          {"a page that exits", "GET /fixtures/core?exit HTTP/1.1", [], "", 500}
+        ] do
+      @tag :capture_log
+      test "#{why} gets #{status} with the exact headers" do
+        response =
+          RawHTTP.request(
+            unquote(request_line),
+            [{"host", "localhost:4002"} | unquote(headers)],
+            unquote(body)
+          )
+
+        assert response.status == unquote(status)
+        assert [csp] = response.headers["content-security-policy"]
+        assert csp =~ @csp
+
+        for {name, value} <- @other_headers do
+          assert response.headers[name] == [value], name
+        end
+
+        assert response.headers["cache-control"] == ["no-store"]
+        refute response.headers["cross-origin-opener-policy"]
+        refute response.headers["cross-origin-embedder-policy"]
+      end
     end
   end
 
