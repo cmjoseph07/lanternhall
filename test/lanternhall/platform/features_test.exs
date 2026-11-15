@@ -108,7 +108,17 @@ defmodule Lanternhall.Platform.FeaturesTest do
                {:error,
                 [
                   {"the feature registry",
-                   "gives id :fixture_core to both Lanternhall.Fixtures.Features.Core and Lanternhall.Fixtures.Features.Invalid.DuplicateCore"}
+                   "gives id :fixture_core to Lanternhall.Fixtures.Features.Core and Lanternhall.Fixtures.Features.Invalid.DuplicateCore"}
+                ]}
+    end
+
+    # Core is listed twice, which gives its id away twice more.
+    test "refuses an id given three times in one line, naming every module" do
+      assert Features.validate([Core, Invalid.DuplicateCore, Core]) ==
+               {:error,
+                [
+                  {"the feature registry",
+                   "gives id :fixture_core to Lanternhall.Fixtures.Features.Core, Lanternhall.Fixtures.Features.Invalid.DuplicateCore and Lanternhall.Fixtures.Features.Core"}
                 ]}
     end
 

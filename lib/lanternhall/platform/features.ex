@@ -172,8 +172,9 @@ defmodule Lanternhall.Platform.Features do
   end
 
   defp duplicate_ids(features) do
-    for {id, [first, second | _]} <- Enum.group_by(features, & &1.id()) do
-      "gives id #{inspect(id)} to both #{inspect(first)} and #{inspect(second)}"
+    for {id, [_, _ | _] = modules} <- Enum.group_by(features, & &1.id()) do
+      {last, rest} = List.pop_at(modules, -1)
+      "gives id #{inspect(id)} to #{Enum.map_join(rest, ", ", &inspect/1)} and #{inspect(last)}"
     end
   end
 

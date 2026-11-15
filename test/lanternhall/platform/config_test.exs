@@ -372,7 +372,7 @@ defmodule Lanternhall.Platform.ConfigTest do
     test "a broken registry stops the check before the file is read", %{tmp_dir: tmp_dir} do
       path = Path.join(tmp_dir, "missing.exs")
 
-      assert {:error, [{"the feature registry", "gives id :fixture_core to both " <> _}] = errors} =
+      assert {:error, [{"the feature registry", "gives id :fixture_core to " <> _}] = errors} =
                Config.check(path, @home, [
                  Core,
                  Lanternhall.Fixtures.Features.Invalid.DuplicateCore
@@ -380,7 +380,7 @@ defmodule Lanternhall.Platform.ConfigTest do
 
       # Named as the registry, so the line cannot be read as an install key called :features.
       assert Config.format_errors(errors) =~
-               ~r/^lanternhall config: the feature registry gives id :fixture_core to both /
+               ~r/^lanternhall config: the feature registry gives id :fixture_core to /
     end
   end
 
