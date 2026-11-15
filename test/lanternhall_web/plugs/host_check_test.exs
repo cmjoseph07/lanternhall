@@ -35,7 +35,7 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
         response = RawHTTP.request("GET / HTTP/1.1", [{"host", unquote(host)}])
 
         assert response.status == 400
-        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert response.headers["content-type"] == ["text/plain; charset=utf-8"]
         assert response.body == "Bad Request: open this app at http://localhost:4002\n"
       end
     end
@@ -44,7 +44,7 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
       response = RawHTTP.request("GET / HTTP/1.0", [])
 
       assert response.status == 400
-      assert response.headers["content-type"] == "text/plain; charset=utf-8"
+      assert response.headers["content-type"] == ["text/plain; charset=utf-8"]
       assert response.body == "Bad Request: open this app at http://localhost:4002\n"
     end
 
@@ -60,8 +60,9 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
       response = RawHTTP.request("GET / HTTP/1.1", [{"host", "evil.test"}])
 
       assert response.status == 400
-      assert response.headers["x-content-type-options"] == "nosniff"
-      assert response.headers["content-security-policy"] =~ "default-src 'none'"
+      assert response.headers["x-content-type-options"] == ["nosniff"]
+      assert [csp] = response.headers["content-security-policy"]
+      assert csp =~ "default-src 'none'"
     end
   end
 

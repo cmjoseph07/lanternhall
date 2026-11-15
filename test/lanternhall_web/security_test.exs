@@ -60,7 +60,8 @@ defmodule LanternhallWeb.SecurityTest do
         ])
 
       assert response.status == 200
-      {:ok, cookie: response.headers["set-cookie"]}
+      assert [cookie] = response.headers["set-cookie"]
+      {:ok, cookie: cookie}
     end
 
     test "is named for this env, so other envs on the machine leave it alone", %{cookie: cookie} do
@@ -85,7 +86,8 @@ defmodule LanternhallWeb.SecurityTest do
           {"accept", "text/html"}
         ])
 
-      [cookie | _attributes] = String.split(page.headers["set-cookie"], ";")
+      [set_cookie] = page.headers["set-cookie"]
+      [cookie | _attributes] = String.split(set_cookie, ";")
 
       [token] =
         page.body
