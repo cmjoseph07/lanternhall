@@ -43,7 +43,10 @@
         };
 
         apply(load());
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && apply(e.newValue));
+        // Another tab changed the choice, or cleared all of the site's storage (no key).
+        window.addEventListener("storage", (e) => {
+          if (e.key === "phx:theme" || e.key === null) apply(load());
+        });
         window.addEventListener("phx:set-theme", (e) => {
           save(e.target.dataset.phxTheme);
           apply(e.target.dataset.phxTheme);

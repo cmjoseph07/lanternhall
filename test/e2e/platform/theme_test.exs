@@ -149,6 +149,29 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
+  # `localStorage.clear()` reaches the app's other tabs as a `storage` event with no key.
+  test "clearing the site's storage in one tab returns the other open tabs to the default",
+       %{conn: conn} do
+    other_tab = open_tab(conn)
+
+    conn =
+      conn
+      |> visit(~p"/")
+      |> assert_has("[data-phx-main].phx-connected")
+      |> choose_theme("light")
+      |> assert_has("html[data-theme=#{@light}]")
+
+    other_tab
+    |> visit(~p"/")
+    |> assert_has("html[data-theme=#{@light}]")
+    |> Playwright.evaluate("localStorage.clear()")
+
+    conn
+    |> assert_has("html[data-theme=#{@dark}]")
+    |> assert_pressed("dark")
+    |> assert_clean_browser()
+  end
+
   # The page's expected error is also written to the test log; show it only on failure.
   @tag :capture_log
   test "with site storage blocked the page still renders its theme from the first frame",
