@@ -3,9 +3,13 @@ defmodule LanternhallWeb.EndpointConfigTest do
   use ExUnit.Case, async: false
 
   @config_dir Path.expand("../../config", __DIR__)
+  @repo_root Path.expand("../..", __DIR__)
 
   # Prod serves on the install config's port; this one differs from the examples' 4100.
   @prod_port 4321
+
+  # Prod reads its database path from the environment.
+  @prod_database "/nonexistent/lanternhall.db"
 
   setup_all do
     install = Path.join(System.tmp_dir!(), "lanternhall-endpoint-config-test.exs")
@@ -38,6 +42,7 @@ defmodule LanternhallWeb.EndpointConfigTest do
 
       # Generated URLs and the Host check's 400 body name this address.
       test "builds URLs for http://localhost:#{port}", %{endpoint: endpoint} do
+        assert endpoint[:url][:scheme] in [nil, "http"]
         assert endpoint[:url][:host] == "localhost"
         assert endpoint[:url][:port] == unquote(port)
       end
@@ -66,14 +71,83 @@ defmodule LanternhallWeb.EndpointConfigTest do
     assert names == Enum.uniq(names)
   end
 
+  # A fallback would sign every session with a key anyone can read in the repo.
+  test "prod stops when SECRET_KEY_BASE is unset", %{install: install} do
+    assert_raise RuntimeError, ~r/SECRET_KEY_BASE is missing/, fn ->
+      runtime_config(:prod, %{"LANTERNHALL_CONFIG" => install, "SECRET_KEY_BASE" => nil})
+    end
+  end
+
+  # Dev, test and prod run side by side on one machine and never share data.
+  describe "database" do
+    test "dev, test and prod each use their own file", %{install: install} do
+      databases =
+        for env <- [:dev, :test, :prod] do
+          config = runtime_config(env, %{"LANTERNHALL_CONFIG" => install})
+          {env, config[:lanternhall][Lanternhall.Repo][:database]}
+        end
+
+      assert databases == [
+               dev: Path.join(@repo_root, "lanternhall_dev.db"),
+               test: Path.join(@repo_root, "lanternhall_test.db"),
+               prod: @prod_database
+             ]
+    end
+
+    # What the suite itself is writing to, whatever the config files say.
+    test "the running test repo uses lanternhall_test.db" do
+      assert Lanternhall.Repo.config()[:database] == Path.join(@repo_root, "lanternhall_test.db")
+    end
+
+    # A default here would be a path in the repo, shared with dev or lost on upgrade.
+    test "prod stops when DATABASE_PATH is unset", %{install: install} do
+      assert_raise RuntimeError, ~r/DATABASE_PATH is missing/, fn ->
+        runtime_config(:prod, %{"LANTERNHALL_CONFIG" => install, "DATABASE_PATH" => nil})
+      end
+    end
+  end
+
+  # Routes and features that exist for one env only: the flags are read when the router
+  # compiles, so a flag set for another env would serve those routes there.
+  describe "env-only code" do
+    test "only test compiles the fixture features' routes", %{install: install} do
+      assert flag_per_env(:fixture_routes, install) == [dev: false, test: true, prod: false]
+    end
+
+    test "only dev compiles the LiveDashboard route", %{install: install} do
+      assert flag_per_env(:dev_routes, install) == [dev: true, test: false, prod: false]
+    end
+
+    for env <- [:dev, :prod] do
+      test "the #{env} registry holds no fixture features", %{install: install} do
+        config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => install})
+
+        assert config[:lanternhall][:features] == [Lanternhall.Platform.PlatformFeature]
+      end
+    end
+  end
+
   describe "install config" do
-    for env <- [:dev, :test] do
-      test "#{env} defaults to the synthetic personal example" do
-        config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => nil})
+    for env <- [:dev, :test], {value, state} <- [{nil, "unset"}, {"", "empty"}] do
+      test "#{env} defaults to the synthetic personal example when LANTERNHALL_CONFIG is #{state}" do
+        config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => unquote(value)})
 
         assert config[:lanternhall][:install].path ==
                  Path.join(@config_dir, "install/personal.example.exs")
       end
+    end
+
+    # Prod has no such default: it reads the install's own file, at the standard path.
+    @tag :tmp_dir
+    test "prod without LANTERNHALL_CONFIG reads $XDG_CONFIG_HOME/lanternhall/config.exs",
+         %{install: install, tmp_dir: tmp_dir} do
+      path = Path.join([tmp_dir, "lanternhall", "config.exs"])
+      File.mkdir_p!(Path.dirname(path))
+      File.cp!(install, path)
+
+      config = runtime_config(:prod, %{"LANTERNHALL_CONFIG" => nil, "XDG_CONFIG_HOME" => tmp_dir})
+
+      assert %{path: ^path, kind: :work} = config[:lanternhall][:install]
     end
 
     test "dev honours LANTERNHALL_CONFIG", %{install: install} do
@@ -96,7 +170,7 @@ defmodule LanternhallWeb.EndpointConfigTest do
   # Mix and releases do, so the assertion covers what each env really boots with.
   defp runtime_config(env, vars) do
     prod_vars = %{
-      "DATABASE_PATH" => "/nonexistent/lanternhall.db",
+      "DATABASE_PATH" => @prod_database,
       "SECRET_KEY_BASE" => "test-only"
     }
 
@@ -105,6 +179,15 @@ defmodule LanternhallWeb.EndpointConfigTest do
       runtime = Config.Reader.read!(Path.join(@config_dir, "runtime.exs"), env: env)
       Config.Reader.merge(compile_time, runtime)
     end)
+  end
+
+  # Whether each env sets the compile-time flag `key`; the router compiles the routes on
+  # any truthy value.
+  defp flag_per_env(key, install) do
+    for env <- [:dev, :test, :prod] do
+      config = runtime_config(env, %{"LANTERNHALL_CONFIG" => install})
+      {env, config[:lanternhall][key] not in [nil, false]}
+    end
   end
 
   # A nil value unsets the variable for the duration of `fun`.

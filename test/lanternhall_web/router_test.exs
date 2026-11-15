@@ -28,6 +28,11 @@ defmodule LanternhallWeb.RouterTest do
     assert statuses[{:post, "/fixtures/personal/plain"}] == 404
   end
 
+  # The LiveDashboard route is compiled in dev only (config/dev.exs sets `dev_routes`).
+  test "no /dev route is compiled outside dev" do
+    assert for(%{path: "/dev" <> _ = path} <- Router.__routes__(), do: path) == []
+  end
+
   test "every live_session gate names a feature" do
     ids = Enum.map(Features.all(), & &1.id())
 
