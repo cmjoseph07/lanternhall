@@ -68,6 +68,11 @@ defmodule LanternhallWeb.SecurityTest do
       assert cookie =~ ~r/^_lanternhall_test=/
     end
 
+    # The session holds the CSRF token; no script on a page needs to read it, so none can.
+    test "is HttpOnly", %{cookie: cookie} do
+      assert cookie =~ ~r/; HttpOnly(;|$)/
+    end
+
     # Strict would drop the cookie when a link on another site opens the app, which
     # starts a new session and breaks the CSRF token of every tab already open.
     test "is SameSite=Lax, not Strict", %{cookie: cookie} do
