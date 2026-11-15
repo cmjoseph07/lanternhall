@@ -56,7 +56,13 @@
         });
       })();
     </script>
-    <.live_title default="Lanternhall" suffix=" · Lanternhall" phx-no-format>{assigns[:page_title]}</.live_title>
+    <%!-- The suffix follows a page's own title only: live_title adds it to the default
+         too, which would read "Lanternhall · Lanternhall" on a page that sets no title. --%>
+    <.live_title
+      default="Lanternhall"
+      suffix={assigns[:page_title] && " · Lanternhall"}
+      phx-no-format
+    >{assigns[:page_title]}</.live_title>
     <%!-- PNG first with `sizes`, so browsers that read SVG favicons pick the SVG. --%>
     <link rel="icon" href={~p"/images/favicon-32.png"} sizes="32x32" type="image/png" />
     <link rel="icon" href={~p"/images/favicon.svg"} type="image/svg+xml" />
