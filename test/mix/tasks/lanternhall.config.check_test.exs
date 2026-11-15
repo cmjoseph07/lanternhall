@@ -14,12 +14,37 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
     on_exit(fn -> Mix.shell(previous) end)
   end
 
-  test "reports a valid file and returns normally" do
+  test "reports a valid file with its kind and returns normally" do
+    for {file, kind} <- [{"personal.example.exs", ":personal"}, {"work.example.exs", ":work"}] do
+      path = Path.expand("../../../config/install/#{file}", __DIR__)
+
+      assert Check.run([path]) == :ok
+      assert_received {:mix_shell, :info, [message]}
+      assert message == "lanternhall config: #{path} is valid (#{kind} install)"
+    end
+  end
+
+  # Run as the command itself: only a fresh `mix` shows what the task loads before it runs.
+  # The app is given an install config it cannot boot with, so loading the runtime config
+  # or starting the app would fail before the task could answer.
+  test "checks the file it is given while the app's own install config is broken",
+       %{tmp_dir: tmp_dir} do
+    broken = Path.join(tmp_dir, "broken.exs")
+    File.write!(broken, "import Config\nconfig :lanternhall, :install, kind: :home\n")
     path = Path.expand("../../../config/install/work.example.exs", __DIR__)
 
-    assert Check.run([path]) == :ok
-    assert_received {:mix_shell, :info, [message]}
-    assert message == "lanternhall config: #{path} is valid (:work install)"
+    mix = fn args ->
+      System.cmd("mix", args,
+        env: [{"MIX_ENV", "test"}, {"LANTERNHALL_CONFIG", broken}],
+        stderr_to_stdout: true
+      )
+    end
+
+    assert {boot, 1} = mix.(["app.config"])
+    assert boot =~ "lanternhall config: :kind must be :personal or :work, got :home"
+
+    assert {check, 0} = mix.(["lanternhall.config.check", path])
+    assert check =~ "lanternhall config: #{path} is valid (:work install)"
   end
 
   test "prints one line per problem and exits non-zero", %{tmp_dir: tmp_dir} do
