@@ -1,6 +1,7 @@
 defmodule LanternhallWeb.Plugs.HostCheckTest do
   # Real requests to the running test server (http://localhost:4002), so Bandit parses
-  # the Host header and Phoenix dispatches sockets exactly as for the browser.
+  # the Host header and Phoenix dispatches sockets exactly as for the browser. One test
+  # dispatches through the endpoint in the test process instead, to see the conn.
   use ExUnit.Case, async: true
 
   # Bandit logs every request it rejects itself (no Host on HTTP/1.1).
@@ -54,6 +55,40 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
 
       assert response.status == 400
       assert response.body == ""
+    end
+
+    # Every kind of route sits behind the check, not only the pages.
+    for {path, kind} <- [
+          {"/healthz", "the health check"},
+          {"/robots.txt", "a static file"},
+          {"/images/logo.svg", "a static file in a directory"},
+          {"/no-such-page", "a path with no route"},
+          {"/fixtures/core/plain", "a feature's route"}
+        ] do
+      test "for #{path} (#{kind}) with a bad Host gets 400 with a plain body" do
+        response = RawHTTP.request("GET #{unquote(path)} HTTP/1.1", [{"host", "evil.test"}])
+
+        assert response.status == 400
+        assert response.headers["content-type"] == ["text/plain; charset=utf-8"]
+        assert response.body == "Bad Request: open this app at http://localhost:4002\n"
+      end
+    end
+
+    # The 400 alone does not prove this: without the halt the client gets the same
+    # reply, and the endpoint's plugs then run on the rejected request and raise
+    # `Plug.Conn.AlreadySentError` in the server. Dispatched in the test process, the
+    # same endpoint hands back the conn, or the error.
+    test "with a bad Host stops at the check" do
+      conn =
+        Phoenix.ConnTest.dispatch(
+          %{Phoenix.ConnTest.build_conn() | host: "evil.test"},
+          LanternhallWeb.Endpoint,
+          :get,
+          "/"
+        )
+
+      assert conn.halted
+      assert conn.status == 400
     end
 
     test "rejected with a bad Host still carries the security headers" do
