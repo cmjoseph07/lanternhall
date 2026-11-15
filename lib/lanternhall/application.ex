@@ -1,6 +1,4 @@
 defmodule Lanternhall.Application do
-  # See https://elixir.hexdocs.pm/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
@@ -10,8 +8,7 @@ defmodule Lanternhall.Application do
   @impl true
   def start(_type, _args) do
     # Validated by config/runtime.exs before any app started.
-    config = Application.fetch_env!(:lanternhall, :install)
-    Config.put(config)
+    config = Config.take_from_app_env()
 
     children =
       [
@@ -23,18 +20,17 @@ defmodule Lanternhall.Application do
       ] ++
         Features.children(config) ++
         [
-          # Start to serve requests, typically the last entry
+          # Last, so requests are served only once everything they need is running.
           LanternhallWeb.Endpoint
         ]
 
-    # See https://elixir.hexdocs.pm/Supervisor.html
-    # for other strategies and supported options
+    # Each child restarts on its own; the others keep running.
     opts = [strategy: :one_for_one, name: Lanternhall.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
+  # Migrations run at boot in a release only; in dev and test, Mix tasks run them.
   defp skip_migrations? do
-    # By default, sqlite migrations are run when using a release
     System.get_env("RELEASE_NAME") == nil
   end
 end

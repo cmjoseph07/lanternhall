@@ -7,8 +7,8 @@ defmodule Lanternhall.Platform.Config do
   checked against the feature registry (`Lanternhall.Platform.Features`) too.
 
   `config/runtime.exs` loads and validates it before any app starts, so a bad value
-  stops boot with one line per problem. `Lanternhall.Application` then stores it once
-  in `:persistent_term`, and the rest of the app reads it through `get/0`.
+  stops boot with one line per problem. `Lanternhall.Application` then moves it out of
+  the app env into `:persistent_term`, and the rest of the app reads it through `get/0`.
 
   Problems are data until that single raise: `path/1` and `check/3` return
   `{:error, [{key, reason}]}`, where `key` is the config key, the environment variable
@@ -106,9 +106,25 @@ defmodule Lanternhall.Platform.Config do
   @spec platform_keys() :: [atom()]
   def platform_keys, do: @known
 
-  @doc "Stores the validated config for the life of the node. Called once at boot."
-  @spec put(t()) :: :ok
-  def put(%__MODULE__{} = config), do: :persistent_term.put(@persistent_term_key, config)
+  @doc """
+  Takes the config that `config/runtime.exs` validated out of the app env and stores it
+  for the life of the node, so `get/0` is the only way to read it. Called once at boot.
+
+  When the app is started again on the same node, the app env is already empty and the
+  config stored the first time is returned.
+  """
+  @spec take_from_app_env() :: t()
+  def take_from_app_env do
+    case Application.fetch_env(:lanternhall, :install) do
+      {:ok, %__MODULE__{} = config} ->
+        :persistent_term.put(@persistent_term_key, config)
+        Application.delete_env(:lanternhall, :install)
+        config
+
+      :error ->
+        get()
+    end
+  end
 
   @doc "The config stored at boot."
   @spec get() :: t()

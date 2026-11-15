@@ -19,6 +19,8 @@ install_env =
 
 install = Lanternhall.Platform.Config.load!(install_env, Lanternhall.Platform.Features.all())
 
+# Handed over in the app env: Lanternhall.Application moves it out at start, into
+# Lanternhall.Platform.Config, the only place the app reads it from.
 config :lanternhall, :install, install
 
 # A release serves HTTP only when asked to: `PHX_SERVER=true bin/lanternhall start`.

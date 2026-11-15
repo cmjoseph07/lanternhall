@@ -478,6 +478,24 @@ defmodule Lanternhall.Platform.ConfigTest do
     end
   end
 
+  describe "take_from_app_env/0" do
+    test "moves the config out of the app env, and returns the stored one when called again" do
+      # Boot already did, so get/0 is the only way to read the config.
+      assert Application.fetch_env(:lanternhall, :install) == :error
+
+      config = Config.get()
+      Application.put_env(:lanternhall, :install, config)
+      on_exit(fn -> Application.delete_env(:lanternhall, :install) end)
+
+      assert Config.take_from_app_env() == config
+      assert Application.fetch_env(:lanternhall, :install) == :error
+
+      # As when the app is stopped and started again on the same node.
+      assert Config.take_from_app_env() == config
+      assert Config.get() == config
+    end
+  end
+
   describe "get/0" do
     test "returns the config stored at boot, which dev and test read from the personal example" do
       assert %Config{kind: :personal} = config = Config.get()
