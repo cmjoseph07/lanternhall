@@ -1,7 +1,7 @@
 defmodule Lanternhall.Platform.FeaturesTest do
   use ExUnit.Case, async: true
 
-  alias Lanternhall.Fixtures.Features.{Core, Integration, Invalid, Personal, Work}
+  alias Lanternhall.Fixtures.Features.{Childless, Core, Integration, Invalid, Personal, Work}
   alias Lanternhall.Platform.{Config, Features, PlatformFeature}
 
   @registry [PlatformFeature, Core, Personal, Work, Integration]
@@ -168,6 +168,15 @@ defmodule Lanternhall.Platform.FeaturesTest do
                 ]}
     end
 
+    test "refuses a feature that depends on itself, naming it at both ends of the cycle" do
+      assert Features.validate([Core, Invalid.SelfDependency]) ==
+               {:error,
+                [
+                  {"the feature registry",
+                   "has a dependency cycle: :fixture_self_dependency -> :fixture_self_dependency"}
+                ]}
+    end
+
     test "refuses a config key that platform or another feature already owns" do
       assert Features.validate([Core, Personal, Invalid.KeyClash]) ==
                {:error,
@@ -249,6 +258,15 @@ defmodule Lanternhall.Platform.FeaturesTest do
                Features.children(config)
 
       assert state.() == "hello"
+    end
+
+    test "gives no supervisor to a feature whose children/1 returns none" do
+      registry = [Childless, Core]
+      # A sound feature in every other way, so only its empty children list is at play.
+      assert Features.validate(registry) == :ok
+
+      assert [%{id: {:feature, :fixture_core}}] =
+               Features.children(config(registry, %{fixture_level: 3}))
     end
 
     test "starts features whose children share a child id" do
