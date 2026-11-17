@@ -85,4 +85,26 @@ defmodule LanternhallWeb.Brand.PWATest do
              {"manifest", "/manifest.webmanifest"}
            ]
   end
+
+  # In a release `~p` and `static_path` link the digested name (manifest-<hash>.webmanifest),
+  # but Plug.Static's `only` option matches a root-level file by its exact name, so the
+  # digested link answers 404. Without a digest (dev and test) both links read the same,
+  # which is why this checks the source and not a response.
+  test "no template links a root-level static file through a digesting helper" do
+    root_files =
+      Enum.filter(LanternhallWeb.static_paths(), &File.regular?(Path.join("priv/static", &1)))
+
+    assert "manifest.webmanifest" in root_files
+
+    digested =
+      ~r{(~p|static_(path|url|integrity)\([^)]*)"/(#{Enum.map_join(root_files, "|", &Regex.escape/1)})}
+
+    offenders =
+      for path <- Path.wildcard("lib/lanternhall_web/**/*.{ex,heex}"),
+          {line, number} <- path |> File.read!() |> String.split("\n") |> Enum.with_index(1),
+          line =~ digested,
+          do: "#{path}:#{number}"
+
+    assert offenders == []
+  end
 end
