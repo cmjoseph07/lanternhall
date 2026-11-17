@@ -140,7 +140,7 @@ defmodule Lanternhall.MixProject do
         "credo",
         "sobelow --config",
         "cmd pnpm --dir assets exec biome check js scripts",
-        "test --exclude e2e --cover"
+        "test --exclude e2e --cover --warnings-as-errors"
       ]
     ]
   end

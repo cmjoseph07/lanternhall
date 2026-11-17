@@ -21,4 +21,4 @@ pre-push:
       run: mix compile --warnings-as-errors
 
     - name: test
-      run: mix test --exclude e2e --cover
+      run: mix test --exclude e2e --cover --warnings-as-errors
