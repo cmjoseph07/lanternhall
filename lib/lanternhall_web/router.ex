@@ -33,12 +33,18 @@ defmodule LanternhallWeb.Router do
   # Each feature's routes follow this shape (SPEC-platform.md section 3.2): one scope that
   # pipes through the feature's gate pipeline (holding `LanternhallWeb.Plugs.FeatureGate`)
   # *before* `:browser`, so a disabled feature's URL answers 404 before format negotiation
-  # or the CSRF check can answer 406 or 403. Its LiveViews sit in their own `live_session`
-  # gated by `LanternhallWeb.FeatureGate`, which covers connected mounts, as those never
-  # pass through the router's pipelines. test/lanternhall_web/router_test.exs checks
-  # every route's gates, so a gate id that names no feature fails the suite, not a
-  # request. Test compiles these routes for the fixture features in
-  # test/support/fixtures/features/; dev and prod never do.
+  # or the CSRF check can answer 406 or 403. Its LiveViews also mount the gate themselves
+  # (`on_mount {LanternhallWeb.FeatureGate, id}`), as a connected mount or a live
+  # navigation never passes through the router's pipelines.
+  #
+  # No route sits in a `live_session` block: every LiveView is in the default one, so a
+  # navigate between any two pages keeps the document. Between two `live_session`s it
+  # would be a full page load.
+  #
+  # test/lanternhall_web/router_test.exs checks every route's gates, so a missing gate or
+  # a gate id that names no feature fails the suite, not a request. Test compiles these
+  # routes for the fixture features in test/support/fixtures/features/; dev and prod
+  # never do.
   if Application.compile_env(:lanternhall, :fixture_routes, false) do
     pipeline :fixture_core_gate do
       plug LanternhallWeb.Plugs.FeatureGate, :fixture_core
@@ -51,9 +57,7 @@ defmodule LanternhallWeb.Router do
     scope "/fixtures/core", Lanternhall.Fixtures.Features do
       pipe_through [:fixture_core_gate, :browser]
 
-      live_session :fixture_core, on_mount: {LanternhallWeb.FeatureGate, :fixture_core} do
-        live "/", CoreLive
-      end
+      live "/", CoreLive
 
       get "/plain", PlainController, :show
       post "/plain", PlainController, :create
@@ -62,9 +66,7 @@ defmodule LanternhallWeb.Router do
     scope "/fixtures/personal", Lanternhall.Fixtures.Features do
       pipe_through [:fixture_personal_gate, :browser]
 
-      live_session :fixture_personal, on_mount: {LanternhallWeb.FeatureGate, :fixture_personal} do
-        live "/", PersonalLive
-      end
+      live "/", PersonalLive
 
       get "/plain", PlainController, :show
       post "/plain", PlainController, :create

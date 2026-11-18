@@ -1,10 +1,8 @@
 defmodule LanternhallWeb.E2E.Platform.FeatureGateTest do
   use LanternhallWeb.E2ECase
 
-  # LiveView logs a warning for every navigate across live_sessions, and each feature has
-  # its own, so the server falls back to a full page load here by design.
-  @moduletag :capture_log
-
+  # The browser reports the 404 as a console error, which the Playwright driver logs.
+  @tag :capture_log
   test "following a live link into a disabled feature lands on the plain 404 page",
        %{conn: conn} do
     conn

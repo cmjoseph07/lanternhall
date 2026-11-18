@@ -9,6 +9,8 @@ defmodule Lanternhall.Fixtures.Features.CoreLive do
   """
   use LanternhallWeb, :live_view
 
+  on_mount {LanternhallWeb.FeatureGate, :fixture_core}
+
   @impl true
   def handle_params(%{"exit" => _}, _uri, _socket), do: exit(:fixture_exit)
 

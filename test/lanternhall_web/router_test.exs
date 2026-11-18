@@ -6,6 +6,9 @@ defmodule LanternhallWeb.RouterTest do
   alias Lanternhall.Platform.Features
   alias LanternhallWeb.{FeatureGate, Router}
 
+  # The LiveViews no feature owns.
+  @platform_pages ~w(/ /settings)
+
   # `bypass_through/2` runs the matched route's pipelines and skips its action, so the
   # walk triggers no side effects. Path parameters get a placeholder value. A pipeline
   # that lets the request through leaves no status; that counts as 200.
@@ -33,16 +36,32 @@ defmodule LanternhallWeb.RouterTest do
     assert for(%{path: "/dev" <> _ = path} <- Router.__routes__(), do: path) == []
   end
 
-  test "every live_session gate names a feature" do
+  # A navigate between two `live_session`s is a full page load, so every LiveView sits
+  # in the same one.
+  test "every LiveView is in one live_session" do
+    sessions = for {path, _view, %{name: name}} <- live_routes(), do: {path, name}
+
+    assert sessions != []
+    assert sessions |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> length() == 1, inspect(sessions)
+  end
+
+  # A live navigation runs no router pipeline, so a feature's LiveView holds the gate
+  # itself, as `on_mount`. The platform's own pages are the only ones without a gate.
+  test "every LiveView outside the platform's pages mounts a gate that names a feature" do
     ids = Enum.map(Features.all(), & &1.id())
 
     gates =
-      for %{path: path, metadata: %{phoenix_live_view: {_, _, _, %{extra: extra}}}} <-
-            Router.__routes__(),
-          %{id: {FeatureGate, id}} <- Map.get(extra, :on_mount, []),
-          do: {path, id}
+      for {path, view, _session} <- live_routes(), path not in @platform_pages do
+        {path, for(%{id: {FeatureGate, id}} <- view.__live__().lifecycle.mount, do: id)}
+      end
 
-    assert for({path, id} <- gates, id not in ids, do: {path, id}) == []
-    assert {"/fixtures/personal", :fixture_personal} in gates
+    assert for({path, gate} <- gates, gate == [] or gate -- ids != [], do: path) == []
+    assert {"/fixtures/personal", [:fixture_personal]} in gates
+  end
+
+  defp live_routes do
+    for %{path: path, metadata: %{phoenix_live_view: {view, _action, _opts, session}}} <-
+          Router.__routes__(),
+        do: {path, view, session}
   end
 end

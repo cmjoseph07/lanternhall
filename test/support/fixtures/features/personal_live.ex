@@ -5,6 +5,8 @@ defmodule Lanternhall.Fixtures.Features.PersonalLive do
   """
   use LanternhallWeb, :live_view
 
+  on_mount {LanternhallWeb.FeatureGate, :fixture_personal}
+
   @impl true
   def render(assigns) do
     ~H"""
