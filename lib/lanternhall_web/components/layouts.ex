@@ -100,11 +100,38 @@ defmodule LanternhallWeb.Layouts do
     """
   end
 
+  # Inlined rather than bundled into app.js, which is deferred and would run after
+  # first paint. Read at compile time from assets/js, where Biome checks it with the
+  # rest of the JS.
+  @theme_script_path Path.expand("../../../assets/js/theme.js", __DIR__)
+  @external_resource @theme_script_path
+  @theme_script File.read!(@theme_script_path)
+
+  @doc """
+  Renders the inline script that applies the theme, for the root layout's `<head>`.
+
+  The choice (system, light or dark; dark when none is stored) lives in
+  `localStorage` and becomes `data-theme` (a daisyUI theme from app.css) plus
+  `data-theme-choice` (what the top bar toggle shows) on `<html>`. The CSP nonce
+  allows exactly this script.
+  """
+  attr :nonce, :string, required: true, doc: "the request's CSP nonce"
+
+  def theme_script(assigns) do
+    assigns = assign(assigns, :source, raw(@theme_script))
+
+    ~H"""
+    <script nonce={@nonce}>
+      <%= @source %>
+    </script>
+    """
+  end
+
   @doc """
   The top bar's theme toggle: system, light or dark.
 
-  A click dispatches `phx:set-theme`, which the inline script in
-  `root.html.heex` handles: it stores the choice and sets `data-theme` and
+  A click dispatches `phx:set-theme`, which the inline theme script
+  (`theme_script/1`) handles: it stores the choice and sets `data-theme` and
   `data-theme-choice` on `<html>`. The highlight follows `data-theme-choice` in
   CSS, so it is right from the first frame; the `.ThemeToggle` hook mirrors the
   choice into `aria-pressed` for screen readers, and `phx-update="ignore"` keeps
