@@ -159,13 +159,19 @@ defmodule Lanternhall.Platform.Config do
   # an error that says only "cannot compile file (errors have been logged)". Capturing the
   # diagnostics keeps its multi-line report off stderr and gives each error a line here.
   # Warnings are not problems with the file, so they are printed as Elixir prints them.
+  #
+  # The file is code, so it can also throw or exit. Both are caught: an exit left alone
+  # would end the caller, and Mix takes `exit({:shutdown, 0})` as success.
   defp read_file(path) do
     {result, diagnostics} =
       Code.with_diagnostics(fn ->
         try do
           {:ok, Config.Reader.read!(path)}
         rescue
-          error -> {:error, error}
+          error -> {:error, one_line(Exception.message(error))}
+        catch
+          :throw, value -> {:error, "it threw #{inspect(value)}"}
+          :exit, reason -> {:error, "it exited with #{inspect(reason)}"}
         end
       end)
 
@@ -176,10 +182,10 @@ defmodule Lanternhall.Platform.Config do
       {{:ok, configs}, _} ->
         {:ok, configs}
 
-      {{:error, error}, []} ->
-        {:error, [{path, "could not be read: " <> one_line(Exception.message(error))}]}
+      {{:error, reason}, []} ->
+        {:error, [{path, "could not be read: " <> reason}]}
 
-      {{:error, _error}, compile_errors} ->
+      {{:error, _reason}, compile_errors} ->
         {:error,
          for %{message: message, position: position} <- compile_errors do
            {path, "could not be read: line #{line(position)}: #{one_line(message)}"}

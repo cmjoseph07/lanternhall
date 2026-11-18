@@ -149,6 +149,23 @@ defmodule Lanternhall.Platform.ConfigTest do
                 ]}
     end
 
+    # A throw or an exit is not an exception, so a `rescue` alone lets it through.
+    test "a file that throws when evaluated gives one line naming the path and the value",
+         %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, "throw(:not_today)\n")
+
+      assert Config.check(path, @home, @features) ==
+               {:error, [{path, "could not be read: it threw :not_today"}]}
+    end
+
+    test "a file that exits when evaluated gives one line naming the path and the reason",
+         %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, "exit(:not_today)\n")
+
+      assert Config.check(path, @home, @features) ==
+               {:error, [{path, "could not be read: it exited with :not_today"}]}
+    end
+
     # The compiler reports these as diagnostics; the exception it then raises says only
     # "cannot compile file (errors have been logged)".
     test "an atom written without its colon gives one line naming the line and the variable",

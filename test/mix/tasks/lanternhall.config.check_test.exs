@@ -76,6 +76,19 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
              ~s(lanternhall config: #{path} could not be read: line 3: undefined variable "personal")
   end
 
+  # Mix takes an exit of {:shutdown, 0} as success, so an exit that got past the task
+  # would end it with status 0 and no line for a file it never finished reading.
+  test "reports a file that exits with status 0 as a problem", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "config.exs")
+    File.write!(path, "import Config\nexit({:shutdown, 0})\n")
+
+    assert catch_exit(Check.run([path])) == {:shutdown, 1}
+    assert_received {:mix_shell, :error, [message]}
+
+    assert message ==
+             "lanternhall config: #{path} could not be read: it exited with {:shutdown, 0}"
+  end
+
   # A warning is not a problem with the file, so it is still shown, as Elixir shows it.
   test "still shows a warning from a file that is valid", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "config.exs")
