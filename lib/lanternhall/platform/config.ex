@@ -237,16 +237,18 @@ defmodule Lanternhall.Platform.Config do
 
     feature_keys =
       for feature <- enabled || [], {key, validator} <- feature.config_keys() do
-        {key, validate_feature_key(validator, Keyword.get_values(install, key))}
+        {key, feature, validate_feature_key(validator, Keyword.get_values(install, key))}
       end
 
     errors =
       errors(platform) ++
-        module_errors ++ errors(feature_keys) ++ unknown_keys(install, enabled, features)
+        module_errors ++
+        Enum.flat_map(feature_keys, &feature_key_error/1) ++
+        unknown_keys(install, enabled, features)
 
     case errors do
       [] ->
-        feature_config = Map.new(feature_keys, fn {key, {:ok, value}} -> {key, value} end)
+        feature_config = Map.new(feature_keys, fn {key, _, {:ok, value}} -> {key, value} end)
         {:ok, Map.merge(fields, %{features: enabled, feature_config: feature_config})}
 
       errors ->
@@ -255,6 +257,15 @@ defmodule Lanternhall.Platform.Config do
   end
 
   defp errors(results), do: for({key, {:error, reason}} <- results, do: {key, reason})
+
+  # Any other result is a bug in the feature, not a problem with the install's value.
+  defp feature_key_error({_key, _feature, {:ok, _value}}), do: []
+
+  defp feature_key_error({key, _feature, {:error, reason}}) when is_binary(reason),
+    do: [{key, reason}]
+
+  defp feature_key_error({key, feature, result}),
+    do: [Features.bad_validator(feature, key, result)]
 
   defp enabled_features(%{kind: kind, modules: modules}, features) do
     case Features.resolve(features, kind, modules) do

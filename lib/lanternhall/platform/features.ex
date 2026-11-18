@@ -46,6 +46,18 @@ defmodule Lanternhall.Platform.Features do
   end
 
   @doc """
+  The problem with `feature`'s validator for install config key `key`, which returned
+  `result`: a shape the behaviour does not name. Only running the validator shows it, so
+  `Lanternhall.Platform.Config` reports it when it checks the key.
+  """
+  @spec bad_validator(module(), atom(), term()) :: Config.error()
+  def bad_validator(feature, key, result) do
+    {@registry,
+     "has #{inspect(feature)}'s validator for #{inspect(key)} return #{inspect(result)}; " <>
+       "it must return {:ok, value} or {:error, reason}, the reason a string"}
+  end
+
+  @doc """
   The enabled set for an install of `kind` listing `modules`: every `:core` feature plus
   the listed ones, in registry order. Each listed id must be a known optional feature
   allowed on `kind`, with its dependencies enabled. Expects a registry that passed

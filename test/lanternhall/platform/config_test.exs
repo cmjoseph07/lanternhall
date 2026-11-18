@@ -440,6 +440,24 @@ defmodule Lanternhall.Platform.ConfigTest do
       assert Config.format_errors(errors) =~
                ~r/^lanternhall config: the feature registry gives id :fixture_core to /
     end
+
+    test "a validator that returns another shape is named as a registry problem",
+         %{tmp_dir: tmp_dir} do
+      path = write_install(tmp_dir, valid_install())
+      feature = Lanternhall.Fixtures.Features.Invalid.BadValidator
+
+      assert Config.check(path, @home, [PlatformFeature, feature]) ==
+               {:error,
+                [
+                  {"the feature registry",
+                   "has #{inspect(feature)}'s validator for :fixture_bare_ok return :ok; " <>
+                     "it must return {:ok, value} or {:error, reason}, the reason a string"},
+                  {"the feature registry",
+                   "has #{inspect(feature)}'s validator for :fixture_atom_reason return " <>
+                     "{:error, :invalid}; " <>
+                     "it must return {:ok, value} or {:error, reason}, the reason a string"}
+                ]}
+    end
   end
 
   describe "path/1" do
