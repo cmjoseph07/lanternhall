@@ -19,8 +19,12 @@ defmodule Lanternhall.MixProject do
           # Only compile-time `quote` blocks for `use LanternhallWeb, ...`; runtime
           # coverage can never reach them.
           LanternhallWeb,
-          # Test support used only by `mix test --only e2e`, which runs outside this gate.
-          LanternhallWeb.E2ECase
+          # Test support in test/support is not the app: the gate measures how much of
+          # the app the tests run, and support code would count towards it.
+          LanternhallWeb.ConnCase,
+          LanternhallWeb.E2ECase,
+          LanternhallWeb.RawHTTP,
+          ~r/^Lanternhall\.Fixtures\./
         ]
       ],
       dialyzer: [
