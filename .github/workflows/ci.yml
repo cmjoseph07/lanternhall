@@ -249,3 +249,27 @@ jobs:
         run: mix release --overwrite
         env:
           MIX_ENV: prod
+
+      # An install checks its config with this task before anything is installed or started,
+      # in prod, where the app itself cannot boot here: no install config, DATABASE_PATH or
+      # SECRET_KEY_BASE is set. The task must still pass both example files, and refuse a
+      # bad one by naming the key.
+      - name: Config check answers in prod without the app's own config
+        run: |
+          unset LANTERNHALL_CONFIG DATABASE_PATH SECRET_KEY_BASE
+          mix lanternhall.config.check config/install/personal.example.exs
+          mix lanternhall.config.check config/install/work.example.exs
+          bad="$RUNNER_TEMP/bad-install.exs"
+          printf 'import Config\nconfig :lanternhall, :install, kind: :home\n' > "$bad"
+          if output=$(mix lanternhall.config.check "$bad" 2>&1); then
+            echo "$output"
+            echo "::error::mix lanternhall.config.check passed a config with an invalid kind"
+            exit 1
+          fi
+          echo "$output"
+          if ! grep -qF "lanternhall config: :kind must be :personal or :work, got :home" <<< "$output"; then
+            echo "::error::mix lanternhall.config.check failed, but not by naming the invalid key"
+            exit 1
+          fi
+        env:
+          MIX_ENV: prod
