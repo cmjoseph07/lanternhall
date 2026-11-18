@@ -213,7 +213,23 @@ jobs:
       - name: Tests
         run: mix test --exclude e2e --warnings-as-errors
 
-      # The release refuses to build without digested assets (mix.exs releases/0).
+      # The release refuses to build without digested assets (mix.exs releases/0). The
+      # manifest is gitignored and not built yet, so this build must stop, and for that reason.
+      - name: Prod release refuses to build without digested assets
+        run: |
+          if output=$(mix release --overwrite 2>&1); then
+            echo "$output"
+            echo "::error::mix release built a release without digested assets"
+            exit 1
+          fi
+          echo "$output"
+          if ! grep -qF "priv/static/cache_manifest.json is missing" <<< "$output"; then
+            echo "::error::mix release failed, but not because the digested assets are missing"
+            exit 1
+          fi
+        env:
+          MIX_ENV: prod
+
       - name: Prod assets
         run: |
           mix assets.setup
