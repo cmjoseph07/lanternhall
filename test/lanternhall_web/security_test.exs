@@ -103,13 +103,13 @@ defmodule LanternhallWeb.SecurityTest do
       {:ok, cookie: cookie, token: token}
     end
 
-    defp post_plain(headers, body) do
+    defp post_plain(headers, body, content_type \\ "application/x-www-form-urlencoded") do
       RawHTTP.request(
         "POST /fixtures/core/plain HTTP/1.1",
         [
           {"host", "localhost:4002"},
           {"accept", "text/html"},
-          {"content-type", "application/x-www-form-urlencoded"},
+          {"content-type", content_type},
           {"content-length", Integer.to_string(byte_size(body))} | headers
         ],
         body
@@ -130,6 +130,19 @@ defmodule LanternhallWeb.SecurityTest do
 
     test "with a token but no session cookie is refused with 403", %{token: token} do
       assert post_plain([], URI.encode_query(%{"_csrf_token" => token})).status == 403
+    end
+
+    # No page uploads a file, so the endpoint parses no multipart body. Any site can send
+    # one to this port without a preflight, and it would be parsed ahead of this check
+    # and of the router; unparsed, its token is never seen.
+    test "as a multipart body is refused with 403, its token unread", ctx do
+      body =
+        "--b\r\ncontent-disposition: form-data; name=\"_csrf_token\"\r\n\r\n" <>
+          ctx.token <> "\r\n--b--\r\n"
+
+      response = post_plain([{"cookie", ctx.cookie}], body, "multipart/form-data; boundary=b")
+
+      assert response.status == 403
     end
   end
 end

@@ -93,8 +93,10 @@ defmodule LanternhallWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # No multipart parser: no page uploads a file, and it would read and buffer a body from
+  # any site, ahead of the router and the CSRF check.
   plug Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
+    parsers: [:urlencoded, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
 
