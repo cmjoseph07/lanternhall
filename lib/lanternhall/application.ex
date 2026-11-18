@@ -3,10 +3,12 @@ defmodule Lanternhall.Application do
 
   use Application
 
-  alias Lanternhall.Platform.{Config, Features}
+  alias Lanternhall.Platform.{Config, Features, Uptime}
 
   @impl true
   def start(_type, _args) do
+    Uptime.mark_started()
+
     # Validated by config/runtime.exs before any app started.
     config = Config.take_from_app_env()
 

@@ -1,10 +1,10 @@
 defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
-  # Not async: one test swaps the install config stored for the whole node.
+  # Not async: tests swap the install config and the start time stored for the whole node.
   use LanternhallWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
-  alias Lanternhall.Platform.Config
+  alias Lanternhall.Platform.{Config, Uptime}
   alias LanternhallWeb.Platform.Settings.InstallLive
 
   describe "the page" do
@@ -47,12 +47,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
                to_string(Application.spec(:phoenix_live_view, :vsn))
              )
     end
-
-    test "shows the uptime and keeps it current", %{view: view} do
-      assert has_element?(view, "#uptime")
-      send(view.pid, :tick)
-      assert has_element?(view, "#uptime")
-    end
   end
 
   # What a prod install shows: the server listens on the port its config names.
@@ -68,6 +62,23 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
 
       assert has_element?(view, "#install-port", "4002")
       refute has_element?(view, "#install-serving-port")
+    end
+  end
+
+  describe "the uptime" do
+    setup do
+      started_at = Uptime.started_at()
+      on_exit(fn -> Uptime.mark_started(started_at) end)
+    end
+
+    test "is the time since the app started, read again on every tick", %{conn: conn} do
+      Uptime.mark_started(System.monotonic_time(:millisecond))
+      {:ok, view, _html} = live(conn, ~p"/settings")
+      assert has_element?(view, "#uptime", "under a minute")
+
+      Uptime.mark_started(System.monotonic_time(:millisecond) - :timer.hours(75))
+      send(view.pid, :tick)
+      assert has_element?(view, "#uptime", "3 d 3 h")
     end
   end
 

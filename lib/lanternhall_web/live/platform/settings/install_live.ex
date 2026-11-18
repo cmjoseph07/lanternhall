@@ -5,7 +5,7 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
   """
   use LanternhallWeb, :live_view
 
-  alias Lanternhall.Platform.Config
+  alias Lanternhall.Platform.{Config, Uptime}
 
   @tick :timer.minutes(1)
 
@@ -119,10 +119,8 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
     end
   end
 
-  # Time since the BEAM node started, which is the app's uptime in a release.
   defp assign_uptime(socket) do
-    {milliseconds, _since_last_call} = :erlang.statistics(:wall_clock)
-    assign(socket, uptime: format_uptime(milliseconds))
+    assign(socket, uptime: format_uptime(Uptime.milliseconds()))
   end
 
   defp versions do
