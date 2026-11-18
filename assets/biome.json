@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
   "files": {
-    "includes": ["js/**", "scripts/**", "**/phoenix-colocated/lanternhall/*/*.js"]
+    "includes": ["js/**", "scripts/**", "**/lanternhall-hooks-dedented/*/*.js"]
   },
   "formatter": {
     "enabled": true,

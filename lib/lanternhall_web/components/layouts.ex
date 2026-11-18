@@ -167,7 +167,7 @@ defmodule LanternhallWeb.Layouts do
         },
         destroyed() {
           this.observer.disconnect()
-        }
+        },
       }
     </script>
     """

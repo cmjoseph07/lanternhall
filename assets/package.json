@@ -4,6 +4,7 @@
   "description": "Dev tools only: Playwright for E2E tests and icon rendering, Biome for JS lint and format. App JS is bundled by esbuild from Mix.",
   "packageManager": "pnpm@12.17.0",
   "scripts": {
+    "hooks": "node scripts/check-colocated-hooks.mjs",
     "icons": "node scripts/render-icons.mjs"
   },
   "devDependencies": {

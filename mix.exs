@@ -140,11 +140,9 @@ defmodule Lanternhall.MixProject do
         "credo",
         "sobelow --config",
         "cmd pnpm --dir assets exec biome check --error-on-warnings js scripts",
-        # Colocated hooks, as the compile step above just extracted them from HEEx. Not
-        # formatted: the extracted file keeps the template's indentation. Biome fails when
-        # the path holds no hook file, so a moved or empty directory cannot pass unseen.
-        "cmd pnpm --dir assets exec biome check --error-on-warnings --formatter-enabled=false " <>
-          "../_build/#{Mix.env()}/phoenix-colocated/lanternhall",
+        # Colocated hooks, as the compile step above just extracted them from HEEx; the
+        # script hands Biome a copy of each without the template's indentation.
+        "cmd pnpm --dir assets run hooks ../_build/#{Mix.env()}",
         "test --exclude e2e --cover --warnings-as-errors"
       ]
     ]
