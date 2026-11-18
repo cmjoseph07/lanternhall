@@ -153,11 +153,19 @@ jobs:
         run: pnpm --dir assets exec playwright install --with-deps chromium
 
       # The committed favicon and PWA icons must be exactly what the generator renders from
-      # logo-mark.svg (its output is byte-stable on macOS and Linux).
+      # logo-mark.svg (its output is byte-stable on macOS and Linux). Every image except the
+      # two hand-written sources is deleted first, so a file the generator stopped writing
+      # shows as deleted and one it started writing shows as untracked.
       - name: Icons match the generator
         run: |
+          git ls-files -z -- priv/static/images ':(exclude)priv/static/images/logo-mark.svg' ':(exclude)priv/static/images/logo.svg' | xargs -0 rm
           pnpm --dir assets run icons
-          git diff --exit-code --stat -- priv/static/images
+          changes=$(git status --porcelain -- priv/static/images)
+          if [ -n "$changes" ]; then
+            echo "$changes"
+            echo "::error::priv/static/images is not what the icon generator writes"
+            exit 1
+          fi
 
       - name: Build assets
         run: |
