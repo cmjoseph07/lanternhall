@@ -21,13 +21,13 @@ defmodule LanternhallWeb.LayoutsTest do
     end
 
     test "shows an info message in the info style", %{view: view} do
-      assert has_element?(view, "#flash-info.alert-info:not(.alert-error)", "Fixture info flash")
+      assert has_element?(view, "#flash-info .alert-info:not(.alert-error)", "Fixture info flash")
     end
 
     test "shows an error message in the error style", %{view: view} do
       assert has_element?(
                view,
-               "#flash-error.alert-error:not(.alert-info)",
+               "#flash-error .alert-error:not(.alert-info)",
                "Fixture error flash"
              )
     end

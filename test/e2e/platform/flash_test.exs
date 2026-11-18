@@ -128,6 +128,54 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     |> assert_clean_browser()
   end
 
+  # Cuts the socket, waits until the client notice has finished appearing, then measures
+  # it beside the info flash: each alert's display and width, and how far its Close
+  # button sits from the alert's right and top edges.
+  #
+  # LiveView sends `phx:show-end` when the show transition's time is up and takes the
+  # transition's classes off in the next frame. The notice's spinner never stops, so
+  # waiting on `document.getAnimations()` here would never end.
+  @notice_beside_flash """
+  (async () => {
+    const notice = document.getElementById("client-error");
+    const shown = new Promise((resolve) => {
+      notice.addEventListener("phx:show-end", resolve, { once: true });
+    });
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+    window.liveSocket.disconnect();
+    await shown;
+    await frame();
+    await frame();
+    const layout = (selector) => {
+      const button = document.querySelector(`${selector} button[aria-label=Close]`);
+      const alert = button.closest(".alert");
+      const box = alert.getBoundingClientRect();
+      const close = button.getBoundingClientRect();
+      return {
+        display: getComputedStyle(alert).display,
+        width: box.width,
+        close: [box.right - close.right, close.top - box.top]
+      };
+    };
+    return { flash: layout("#flash-info"), notice: layout("#client-error") };
+  })()
+  """
+
+  # Showing a notice must not change its layout: LiveView shows an element by writing an
+  # inline `display` on it, and one written on the alert itself would replace its grid.
+  test "a reconnect notice is laid out as a flash is, with Close at the top right",
+       %{conn: conn} do
+    conn
+    |> visit(~p"/fixtures/core?flashes")
+    |> assert_has("[data-phx-main].phx-connected")
+    |> Playwright.evaluate(@notice_beside_flash, fn %{"flash" => flash, "notice" => notice} ->
+      assert notice["display"] == "grid"
+      assert notice == flash
+    end)
+    |> assert_has("#client-error")
+    |> assert_clean_browser()
+  end
+
   # The page rejoins by itself about half a second after the notice shows, too short to
   # catch by polling, so the page records each change of the notice's `hidden` attribute.
   @watch_server_notice """

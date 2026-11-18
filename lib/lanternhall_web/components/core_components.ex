@@ -35,6 +35,10 @@ defmodule LanternhallWeb.CoreComponents do
   is the one that announces it. A second one inside it would make a screen reader read
   the flash out twice.
 
+  The id, the click and the extra attributes sit on a plain container around the alert.
+  `show/2` writes `display: block` on the element it shows. On the alert itself that would
+  replace the alert's grid, the layout that keeps the icon, the text and Close in one row.
+
   ## Examples
 
       <.flash kind={:info} flash={@flash} />
@@ -63,27 +67,29 @@ defmodule LanternhallWeb.CoreComponents do
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
-      class={[
-        "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
-        @kind == :info && "alert-info",
-        @kind == :error && "alert-error"
-      ]}
+      class="w-80 sm:w-96 max-w-80 sm:max-w-96"
       {@rest}
     >
-      <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
-      <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
-      <div>
-        <p :if={@title} class="font-semibold">{@title}</p>
-        <p>{msg}</p>
+      <div class={[
+        "alert text-wrap",
+        @kind == :info && "alert-info",
+        @kind == :error && "alert-error"
+      ]}>
+        <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
+        <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
+        <div>
+          <p :if={@title} class="font-semibold">{@title}</p>
+          <p>{msg}</p>
+        </div>
+        <div class="flex-1" />
+        <button
+          type="button"
+          class="group self-start cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+          aria-label="Close"
+        >
+          <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
+        </button>
       </div>
-      <div class="flex-1" />
-      <button
-        type="button"
-        class="group self-start cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-        aria-label="Close"
-      >
-        <.icon name="hero-x-mark" class="size-5 opacity-70 group-hover:opacity-100" />
-      </button>
     </div>
     """
   end
