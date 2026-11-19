@@ -3,6 +3,7 @@ defmodule LanternhallWeb.Endpoint do
 
   alias LanternhallWeb.Plugs.HostCheck
   alias LanternhallWeb.Plugs.SecurityHeaders
+  alias LanternhallWeb.Plugs.SessionCookieCheck
   alias Plug.Conn.WrapperError
 
   # The session will be stored in the cookie and signed,
@@ -26,20 +27,23 @@ defmodule LanternhallWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: false
 
-  # `code_reloading?` is true in dev only, where dev tools need the CSP carve-out.
-  @security_headers SecurityHeaders.init(dev_tools: code_reloading?)
-
   # Phoenix dispatches `socket` paths (LiveView, live reload) before the first `plug`
-  # below, so the security headers and the Host check wrap the whole endpoint instead:
+  # below, so the security headers and the two checks wrap the whole endpoint instead:
   # every response carries the headers, and every request, WebSocket upgrades included,
-  # passes the Host check first (SPEC-platform.md section 3.3).
-  def call(conn, opts) do
-    conn =
-      conn
-      |> SecurityHeaders.call(@security_headers)
-      |> HostCheck.call([])
+  # passes the checks first (SPEC-platform.md section 3.3).
+  #
+  # `code_reloading?` is true in dev only, where dev tools need the CSP carve-out.
+  @before_dispatch [
+    {SecurityHeaders, dev_tools: code_reloading?},
+    {HostCheck, []},
+    {SessionCookieCheck, key: @session_options[:key]}
+  ]
 
-    # Once the Host check has answered, the request ends here. Phoenix would stop on the
+  def call(conn, opts) do
+    # Runs each plug in turn and stops at the first check that answers.
+    conn = Plug.run(conn, @before_dispatch)
+
+    # Once a check has answered, the request ends here. Phoenix would stop on the
     # halted conn too (its socket transport and plug pipeline both skip one), so this is
     # a second layer and no test can tell it apart; it keeps the boundary explicit.
     if conn.halted do
