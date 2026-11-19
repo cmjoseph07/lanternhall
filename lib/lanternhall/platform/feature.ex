@@ -36,7 +36,8 @@ defmodule Lanternhall.Platform.Feature do
   @doc """
   Child specs to supervise while the feature is enabled, given the validated config.
   They run under the feature's own supervisor, so child ids need only be unique within
-  the feature.
+  the feature. If one fails to start, or keeps crashing, the feature stops and the rest
+  of the app runs without it.
   """
   @callback children(Config.t()) :: [Supervisor.child_spec() | {module(), term()} | module()]
 

@@ -1,7 +1,16 @@
 defmodule Lanternhall.Platform.FeaturesTest do
   use ExUnit.Case, async: true
 
-  alias Lanternhall.Fixtures.Features.{Childless, Core, Integration, Invalid, Personal, Work}
+  alias Lanternhall.Fixtures.Features.{
+    Childless,
+    Core,
+    Integration,
+    Invalid,
+    Personal,
+    Unstartable,
+    Work
+  }
+
   alias Lanternhall.Platform.{Config, Features, PlatformFeature}
 
   @registry [PlatformFeature, Core, Personal, Work, Integration]
@@ -242,7 +251,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
       assert [
                %{
                  id: {:feature, :fixture_core},
-                 start: {Supervisor, :start_link, [[{Agent, state}], [strategy: :one_for_one]]},
+                 start: {Features, :start_feature, [:fixture_core, [{Agent, state}]]},
                  type: :supervisor,
                  restart: :transient
                }
@@ -254,7 +263,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
     test "hands each feature the validated config" do
       config = config([Personal], %{fixture_greeting: "hello"})
 
-      assert [%{start: {Supervisor, :start_link, [[{Agent, state}], _opts]}}] =
+      assert [%{start: {Features, :start_feature, [:fixture_personal, [{Agent, state}]]}}] =
                Features.children(config)
 
       assert state.() == "hello"
@@ -290,6 +299,20 @@ defmodule Lanternhall.Platform.FeaturesTest do
 
       assert feature_pid(sup, :fixture_core) == :undefined
       assert agent_state(sup, :fixture_personal) == "hello"
+    end
+
+    test "leaves a feature whose child fails to start stopped, logs it and starts the others" do
+      registry = [Unstartable, Core]
+      # A sound feature in every other way, so only its failing child is at play.
+      assert Features.validate(registry) == :ok
+
+      {sup, log} =
+        ExUnit.CaptureLog.with_log(fn -> start_tree(config(registry, %{fixture_level: 3})) end)
+
+      assert feature_pid(sup, :fixture_unstartable) == :undefined
+      assert agent_state(sup, :fixture_core) == 3
+      assert log =~ "feature :fixture_unstartable failed to start and is left stopped"
+      assert log =~ "fixture child cannot start"
     end
   end
 

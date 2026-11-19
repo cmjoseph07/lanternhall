@@ -15,6 +15,8 @@ defmodule Lanternhall.Platform.Features do
 
   alias Lanternhall.Platform.{Config, Feature}
 
+  require Logger
+
   # How a registry problem is named in an error line; an atom would print as an install key.
   @registry "the feature registry"
 
@@ -96,8 +98,12 @@ defmodule Lanternhall.Platform.Features do
   One supervisor per enabled feature with children, in registry order, with id
   `{:feature, id}`. Child ids then only need to be unique within their feature.
 
-  Each is `:transient`: if a child crashes past the supervisor's restart limit, that
-  feature stops (and is logged) while the rest of the app keeps running.
+  A feature stops alone, and the rest of the app keeps running:
+
+    * if a child fails to start, the feature is logged and left stopped (see
+      `start_feature/2`), so the app boots without it;
+    * if a child crashes past the supervisor's restart limit, the feature stops and is
+      not started again, as each supervisor is `:transient`.
   """
   @spec children(Config.t()) :: [Supervisor.child_spec()]
   def children(%Config{features: features} = config) do
@@ -107,10 +113,35 @@ defmodule Lanternhall.Platform.Features do
         children != [] do
       %{
         id: {:feature, feature.id()},
-        start: {Supervisor, :start_link, [children, [strategy: :one_for_one]]},
+        start: {__MODULE__, :start_feature, [feature.id(), children]},
         type: :supervisor,
         restart: :transient
       }
+    end
+  end
+
+  @doc """
+  Starts the supervisor of feature `id` over `children`; the start function of the child
+  specs `children/1` returns.
+
+  When a child fails to start, the failure is logged and the answer is `:ignore`: the
+  supervisor above keeps the feature's entry with no process, where failing would stop
+  the app's boot.
+  """
+  @spec start_feature(Feature.id(), [Supervisor.child_spec() | {module(), term()} | module()]) ::
+          {:ok, pid()} | :ignore
+  def start_feature(id, children) do
+    case Supervisor.start_link(children, strategy: :one_for_one) do
+      {:ok, pid} ->
+        {:ok, pid}
+
+      {:error, reason} ->
+        Logger.error(
+          "feature #{inspect(id)} failed to start and is left stopped: " <>
+            Exception.format_exit(reason)
+        )
+
+        :ignore
     end
   end
 
