@@ -118,6 +118,17 @@ defmodule LanternhallWeb.EndpointConfigTest do
       assert flag_per_env(:dev_routes, install) == [dev: true, test: false, prod: false]
     end
 
+    # A release holds every dependency that is not kept to another env, and the tools
+    # these two bring (a dashboard of the running system, a code reloader) are for dev.
+    for app <- [:phoenix_live_dashboard, :phoenix_live_reload] do
+      test "#{app} is a dev-only dependency" do
+        dep = List.keyfind(Mix.Project.config()[:deps], unquote(app), 0)
+
+        assert {_app, _version, opts} = dep
+        assert opts[:only] == :dev
+      end
+    end
+
     for env <- [:dev, :prod] do
       test "the #{env} registry holds no fixture features", %{install: install} do
         config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => install})

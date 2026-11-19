@@ -74,13 +74,5 @@ defmodule LanternhallWeb.Router do
   end
 
   # LiveDashboard at /dev/dashboard, compiled in dev only (config/dev.exs sets `dev_routes`).
-  if Application.compile_env(:lanternhall, :dev_routes) do
-    import Phoenix.LiveDashboard.Router
-
-    scope "/dev" do
-      pipe_through :browser
-
-      live_dashboard "/dashboard", metrics: LanternhallWeb.Telemetry
-    end
-  end
+  use LanternhallWeb.DevRoutes
 end

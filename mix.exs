@@ -16,9 +16,10 @@ defmodule Lanternhall.MixProject do
       test_coverage: [
         summary: [threshold: 90],
         ignore_modules: [
-          # Only compile-time `quote` blocks for `use LanternhallWeb, ...`; runtime
-          # coverage can never reach them.
+          # Only compile-time `quote` blocks for `use LanternhallWeb, ...` and
+          # `use LanternhallWeb.DevRoutes`; runtime coverage can never reach them.
           LanternhallWeb,
+          LanternhallWeb.DevRoutes,
           # Test support in test/support is not the app: the gate measures how much of
           # the app the tests run, and support code would count towards it.
           LanternhallWeb.ConnCase,
@@ -86,7 +87,7 @@ defmodule Lanternhall.MixProject do
       {:phoenix_live_reload, "== 1.7.0", only: :dev},
       {:phoenix_live_view, "== 1.2.13"},
       {:lazy_html, "== 0.1.13", only: :test},
-      {:phoenix_live_dashboard, "== 0.9.1"},
+      {:phoenix_live_dashboard, "== 0.9.1", only: :dev},
       {:esbuild, "== 0.10.1", runtime: Mix.env() == :dev},
       {:tailwind, "== 0.5.2", runtime: Mix.env() == :dev},
       {:heroicons,

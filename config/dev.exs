@@ -21,7 +21,7 @@ config :lanternhall, LanternhallWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:lanternhall, ~w(--watch)]}
   ]
 
-# Compiles the LiveDashboard route (lib/lanternhall_web/router.ex).
+# Compiles the LiveDashboard route (lib/lanternhall_web/dev_routes.ex).
 config :lanternhall, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs

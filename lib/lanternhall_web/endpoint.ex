@@ -82,17 +82,18 @@ defmodule LanternhallWeb.Endpoint do
     raise_on_missing_only: code_reloading?,
     cache_control_for_vsn_requests: "public, max-age=31536000, immutable"
 
-  # Code reloading is on in dev only (`code_reloader: true` in config/dev.exs).
+  # Code reloading is on in dev only (`code_reloader: true` in config/dev.exs), and so
+  # are the dev tools: live reload and LiveDashboard are dev-only dependencies.
   if code_reloading? do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :lanternhall
-  end
 
-  plug Phoenix.LiveDashboard.RequestLogger,
-    param_key: "request_logger",
-    cookie_key: "request_logger"
+    plug Phoenix.LiveDashboard.RequestLogger,
+      param_key: "request_logger",
+      cookie_key: "request_logger"
+  end
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
