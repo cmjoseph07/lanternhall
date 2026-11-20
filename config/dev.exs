@@ -18,7 +18,9 @@ config :lanternhall, LanternhallWeb.Endpoint,
   secret_key_base: "KR7S/DTrNMFiC+Vl56Dv5nvv3fAjOZs922HFT155l1f02fz7KlSaue+L2IV5rO0s",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:lanternhall, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:lanternhall, ~w(--watch)]}
+    # Not Tailwind.install_and_run/2, which runs a download without checking its hash.
+    tailwind:
+      {Mix.Tasks.Lanternhall.Tailwind.Install, :install_and_run, [:lanternhall, ~w(--watch)]}
   ]
 
 # Compiles the LiveDashboard route (lib/lanternhall_web/dev_routes.ex).

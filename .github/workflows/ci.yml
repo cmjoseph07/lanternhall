@@ -22,6 +22,9 @@ concurrency:
 
 # Actions are pinned by commit SHA (tag in the comment); each was at least 7 days old when pinned.
 # Hex is pinned for the same reason; rebar3 comes from builds.hex.pm for this Elixir version.
+# The toolchain is installed from mise.lock: with that file in the repo, mise-action runs
+# `mise install --locked`, which checks each download against the SHA-256 recorded there
+# and refuses a tool that has no entry.
 # Each job caches its own deps and _build (key starts with the job id): the jobs build
 # different envs, and a shared key would keep only the first job's _build.
 # Runner images are pinned (newest Ubuntu LTS and macOS), so an image change is a reviewed
@@ -43,7 +46,7 @@ jobs:
       # Only the scanner: this job needs no Erlang, Elixir or Node.
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
-          version: 2026.10.25
+          version: 2026.11.7
           install_args: osv-scanner
 
       # Checks every locked Hex and npm package against the OSV database (https://osv.dev),
@@ -66,7 +69,7 @@ jobs:
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
-          version: 2026.10.25
+          version: 2026.11.7
 
       # The pre-commit hook scans staged changes only, and `--no-verify` skips it. This scans
       # every commit, so a secret added and removed again still fails. Known findings are
@@ -140,7 +143,7 @@ jobs:
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
-          version: 2026.10.25
+          version: 2026.11.7
 
       - name: Read toolchain versions
         id: versions
@@ -215,7 +218,7 @@ jobs:
 
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
-          version: 2026.10.25
+          version: 2026.11.7
 
       - name: Read toolchain versions
         id: versions

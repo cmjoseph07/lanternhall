@@ -68,6 +68,9 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.3.3",
+  # The package's check runs the binary (`--help`) when the app starts, to read its
+  # version. The SHA-256 below pins the version too, and is checked before any run.
+  version_check: false,
   lanternhall: [
     args: ~w(
       --input=assets/css/app.css
@@ -76,6 +79,18 @@ config :tailwind,
     cd: Path.expand("..", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
+
+# SHA-256 of the Tailwind binary above for each platform in mise.lock, copied from the
+# release's own list:
+# https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/sha256sums.txt
+# `mix lanternhall.tailwind.install` refuses any other binary. Change these together with
+# the version.
+config :lanternhall, :tailwind_sha256, %{
+  "linux-arm64" => "55fd0b241214eff3de1e8ee4f22796662f2d2e7a49bcfca7477cfd0bac398195",
+  "linux-x64" => "dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a",
+  "macos-arm64" => "cdf646702987a743464dff4d9c60fd4480d1c1e73dd819a9a67f1078815dce9d",
+  "macos-x64" => "7922e0953f2110c05976e3bf58f14e643d90427575e766b7d433f5f80cbee7e1"
+}
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,

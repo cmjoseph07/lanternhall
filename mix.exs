@@ -131,10 +131,20 @@ defmodule Lanternhall.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind lanternhall", "esbuild lanternhall"],
+      # Tailwind's binary is a GitHub release file that the tailwind package runs without
+      # checking; lanternhall.tailwind.install holds it to the SHA-256 in config/config.exs
+      # before each run. esbuild's comes from npm, and its package checks the registry's
+      # signature and hash on download.
+      "assets.setup": ["lanternhall.tailwind.install", "esbuild.install --if-missing"],
+      "assets.build": [
+        "compile",
+        "lanternhall.tailwind.install",
+        "tailwind lanternhall",
+        "esbuild lanternhall"
+      ],
       "assets.deploy": [
         "compile",
+        "lanternhall.tailwind.install",
         "tailwind lanternhall --minify",
         "esbuild lanternhall --minify",
         "phx.digest"

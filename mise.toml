@@ -1,3 +1,18 @@
+# Every tool is pinned by version here and by download URL and SHA-256 in mise.lock
+# (https://mise.jdx.dev/dev-tools/mise-lock.html). After changing a version, run `mise lock`
+# and commit both files; CI installs with `mise install --locked`, which refuses a tool
+# that has no entry in the lockfile.
+
+# An older mise cannot read the lockfile's format and would install without checking it.
+min_version = "2026.11.1"
+
+# On Linux, Erlang comes from a prebuilt archive, and the lockfile holds one checksum for
+# each archive. This names the build every Linux machine installs: the Ubuntu 24.04 one,
+# which also runs on 26.04. Without it mise picks by distro, and compiles from source on
+# Ubuntu 26.04, where the lockfile would have no entry to check.
+[settings.erlang]
+precompiled_os = "ubuntu-24.04"
+
 [tools]
 erlang = "29.0.6"
 elixir = "1.20.5-otp-29"
