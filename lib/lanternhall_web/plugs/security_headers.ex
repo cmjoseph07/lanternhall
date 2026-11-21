@@ -12,7 +12,8 @@ defmodule LanternhallWeb.Plugs.SecurityHeaders do
 
   The endpoint passes `dev_tools: true` in dev only, where the live-reload iframe,
   the error pages and LiveDashboard need inline code that cannot carry the nonce:
-  pages also allow a same-origin frame, and those dev tool responses get no CSP.
+  pages also allow a same-origin frame, and those dev tool responses keep the
+  `frame-ancestors` directive alone, so another origin still cannot frame them.
   """
   @behaviour Plug
 
@@ -39,25 +40,27 @@ defmodule LanternhallWeb.Plugs.SecurityHeaders do
     |> put_csp(nonce, opts[:dev_tools])
   end
 
-  defp put_csp(conn, nonce, false),
-    do: put_resp_header(conn, "content-security-policy", policy(nonce))
+  defp put_csp(conn, nonce, false), do: put_csp(conn, policy(nonce))
 
-  # The live-reload frame and LiveDashboard exist in dev only.
-  defp put_csp(%{path_info: ["phoenix", "live_reload", "frame" | _]} = conn, _, true), do: conn
-  defp put_csp(%{path_info: ["dev" | _]} = conn, _nonce, true), do: conn
+  # The live-reload frame and LiveDashboard exist in dev only. Every page embeds the
+  # frame, so it allows its own origin; nothing embeds the dashboard.
+  defp put_csp(%{path_info: ["phoenix", "live_reload", "frame" | _]} = conn, _nonce, true),
+    do: put_csp(conn, "frame-ancestors 'self'")
+
+  defp put_csp(%{path_info: ["dev" | _]} = conn, _nonce, true),
+    do: put_csp(conn, "frame-ancestors 'none'")
 
   defp put_csp(conn, nonce, true) do
     conn
-    |> put_resp_header("content-security-policy", policy(nonce) <> "; frame-src 'self'")
+    |> put_csp(policy(nonce) <> "; frame-src 'self'")
     |> register_before_send(fn
       # Plug.Debugger and Phoenix.CodeReloader error pages use inline code.
-      %{status: status} = conn when status >= 400 ->
-        delete_resp_header(conn, "content-security-policy")
-
-      conn ->
-        conn
+      %{status: status} = conn when status >= 400 -> put_csp(conn, "frame-ancestors 'none'")
+      conn -> conn
     end)
   end
+
+  defp put_csp(conn, policy), do: put_resp_header(conn, "content-security-policy", policy)
 
   defp policy(nonce) do
     Enum.join(

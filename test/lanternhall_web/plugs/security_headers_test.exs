@@ -126,21 +126,34 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       end
     end
 
-    for path <- ["/phoenix/live_reload/frame", "/dev/dashboard/home"] do
-      test "#{path} has no CSP but every other header", %{opts: opts} do
-        conn = :get |> build_conn(unquote(path)) |> SecurityHeaders.call(opts)
+    # Every page embeds the live-reload frame, so it allows its own origin; no page
+    # embeds LiveDashboard. 500 shows that a dev tool's own error keeps its rule.
+    for {path, ancestors} <- [
+          {"/phoenix/live_reload/frame", "'self'"},
+          {"/dev/dashboard/home", "'none'"}
+        ],
+        status <- [200, 500] do
+      test "#{path} with #{status} keeps only frame-ancestors #{ancestors}", %{opts: opts} do
+        conn =
+          :get
+          |> build_conn(unquote(path))
+          |> SecurityHeaders.call(opts)
+          |> send_resp(unquote(status), "")
 
-        assert get_resp_header(conn, "content-security-policy") == []
+        assert get_resp_header(conn, "content-security-policy") ==
+                 ["frame-ancestors #{unquote(ancestors)}"]
+
         assert_other_headers(conn)
       end
     end
 
     # 400 is the lowest error status, so it pins the boundary.
     for status <- [400, 404, 500] do
-      test "a #{status} error page drops the CSP for the debugger", %{conn: conn, opts: opts} do
+      test "a #{status} error page keeps only frame-ancestors 'none' for the debugger",
+           %{conn: conn, opts: opts} do
         conn = conn |> SecurityHeaders.call(opts) |> send_resp(unquote(status), "")
 
-        assert get_resp_header(conn, "content-security-policy") == []
+        assert get_resp_header(conn, "content-security-policy") == ["frame-ancestors 'none'"]
         assert_other_headers(conn)
       end
     end
