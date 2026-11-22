@@ -79,7 +79,7 @@ defmodule Lanternhall.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "== 1.8.16"},
+      {:phoenix, "== 1.8.17"},
       {:phoenix_ecto, "== 4.7.0"},
       {:ecto_sql, "== 3.14.0"},
       {:ecto_sqlite3, "== 0.26.0"},
