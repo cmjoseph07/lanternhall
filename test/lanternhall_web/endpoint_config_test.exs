@@ -129,6 +129,31 @@ defmodule LanternhallWeb.EndpointConfigTest do
       end
     end
 
+    # Debug error pages show source and stack traces to any client, the code reloader
+    # compiles on request, and the watchers and live reload run dev-only tools.
+    @dev_only_keys [:code_reloader, :debug_errors, :live_reload, :watchers]
+
+    # With and without PHX_SERVER: a release serves only with it set, and runtime.exs
+    # branches on it.
+    for env <- [:test, :prod], phx_server <- [nil, "true"] do
+      test "the #{env} endpoint sets no dev-only key, PHX_SERVER #{inspect(phx_server)}",
+           %{install: install} do
+        vars = %{"LANTERNHALL_CONFIG" => install, "PHX_SERVER" => unquote(phx_server)}
+        endpoint = runtime_config(unquote(env), vars)[:lanternhall][LanternhallWeb.Endpoint]
+
+        assert Keyword.take(endpoint, @dev_only_keys) == []
+      end
+    end
+
+    # Keeps the list honest: a key renamed or moved off the endpoint would leave the
+    # tests above passing on nothing.
+    test "the dev endpoint sets every dev-only key", %{install: install} do
+      config = runtime_config(:dev, %{"LANTERNHALL_CONFIG" => install})
+      endpoint = config[:lanternhall][LanternhallWeb.Endpoint]
+
+      assert Enum.filter(@dev_only_keys, &endpoint[&1]) == @dev_only_keys
+    end
+
     for env <- [:dev, :prod] do
       test "the #{env} registry holds no fixture features", %{install: install} do
         config = runtime_config(unquote(env), %{"LANTERNHALL_CONFIG" => install})
