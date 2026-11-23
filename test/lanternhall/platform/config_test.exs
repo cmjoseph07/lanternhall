@@ -127,15 +127,87 @@ defmodule Lanternhall.Platform.ConfigTest do
                Config.check(tmp_dir, @home, @features)
     end
 
-    test "a syntax error gives one line naming the path and the error", %{tmp_dir: tmp_dir} do
+    test "a syntax error gives one line naming the line and the error", %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "config :lanternhall, :install, kind:\n")
 
-      assert {:error, [{^path, reason}]} = Config.check(path, @home, @features)
-      assert reason =~ ~r/^could not be read: .*syntax error: expression is incomplete$/
-      refute reason =~ "\n"
+      assert Config.check(path, @home, @features) ==
+               {:error,
+                [{path, "could not be read: line 3: syntax error: expression is incomplete"}]}
     end
 
-    test "a file that raises when evaluated gives one line naming the path and the error",
+    test "an unclosed bracket names the line that opens it", %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, "config :lanternhall, :install, [\n  kind: :personal\n\n")
+
+      assert Config.check(path, @home, @features) ==
+               {:error, [{path, "could not be read: line 3: missing terminator: ]"}]}
+    end
+
+    test "a wrong closing bracket names its own line", %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, "config :lanternhall, :install, [\n  kind: :personal\n)\n")
+
+      assert Config.check(path, @home, @features) ==
+               {:error, [{path, "could not be read: line 5: unexpected token: )"}]}
+    end
+
+    test "a syntax error in an imported file names the import's line and that file",
+         %{tmp_dir: tmp_dir} do
+      imported = Path.join(tmp_dir, "imported.exs")
+      shown = Path.relative_to_cwd(imported)
+      path = write_config(tmp_dir, ~s|import_config "imported.exs"\n|)
+
+      for {body, reason} <- [
+            {"config :lanternhall, :install, kind:\n",
+             "token missing on #{shown}:1:37: error: syntax error: expression is incomplete"},
+            {"config :lanternhall, :install, [\n)\n",
+             "mismatched delimiter found on #{shown}:2:1: error: unexpected token: )"}
+          ] do
+        File.write!(imported, body)
+
+        assert Config.check(path, @home, @features) ==
+                 {:error, [{path, "could not be read: line 3: #{reason}"}]}
+      end
+    end
+
+    test "a file that is not valid UTF-8 gives one line without a line number",
+         %{tmp_dir: tmp_dir} do
+      path = write_config(tmp_dir, <<"config :lanternhall, :install, kind: \"", 255, "\"\n">>)
+
+      assert Config.check(path, @home, @features) ==
+               {:error,
+                [{path, "could not be read: invalid encoding starting at <<255, 34, 10>>"}]}
+    end
+
+    test "a time zone written without its quotes names the line of the value",
+         %{tmp_dir: tmp_dir} do
+      body = """
+      config :lanternhall, :install,
+        kind: :personal,
+        port: 4100,
+        modules: [],
+        time_zone: America/Chicago
+      """
+
+      assert tmp_dir |> write_config(body) |> Config.check(@home, @features) ==
+               {:error,
+                [
+                  {Path.join(tmp_dir, "config.exs"),
+                   "could not be read: line 7: bad argument in arithmetic expression"}
+                ]}
+    end
+
+    test "a relative path still names the line", %{tmp_dir: tmp_dir} do
+      for {body, reason} <- [
+            {"config :lanternhall, :install, kind:\n", "syntax error: expression is incomplete"},
+            {~s|raise "not today"\n|, "not today"}
+          ] do
+        relative = tmp_dir |> write_config(body) |> Path.relative_to_cwd()
+
+        assert Config.check(relative, @home, @features) ==
+                 {:error, [{relative, "could not be read: line 3: #{reason}"}]}
+      end
+    end
+
+    test "a file that raises inside a call gives one line naming the line and the error",
          %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, ~s|System.fetch_env!("LANTERNHALL_NO_SUCH_VARIABLE")\n|)
 
@@ -143,25 +215,25 @@ defmodule Lanternhall.Platform.ConfigTest do
                {:error,
                 [
                   {path,
-                   "could not be read: could not fetch environment variable " <>
+                   "could not be read: line 3: could not fetch environment variable " <>
                      "\"LANTERNHALL_NO_SUCH_VARIABLE\" because it is not set"}
                 ]}
     end
 
-    test "a file that throws when evaluated gives one line naming the path and the value",
+    test "a file that throws when evaluated gives one line naming the line and the value",
          %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "throw(:not_today)\n")
 
       assert Config.check(path, @home, @features) ==
-               {:error, [{path, "could not be read: it threw :not_today"}]}
+               {:error, [{path, "could not be read: line 3: it threw :not_today"}]}
     end
 
-    test "a file that exits when evaluated gives one line naming the path and the reason",
+    test "a file that exits when evaluated gives one line naming the line and the reason",
          %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "exit(:not_today)\n")
 
       assert Config.check(path, @home, @features) ==
-               {:error, [{path, "could not be read: it exited with :not_today"}]}
+               {:error, [{path, "could not be read: line 3: it exited with :not_today"}]}
     end
 
     # The compiler reports these as diagnostics; the exception it then raises says only

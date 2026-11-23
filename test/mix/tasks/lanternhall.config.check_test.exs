@@ -81,7 +81,7 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
     assert_received {:mix_shell, :error, [message]}
 
     assert message ==
-             "lanternhall config: #{path} could not be read: it exited with {:shutdown, 0}"
+             "lanternhall config: #{path} could not be read: line 2: it exited with {:shutdown, 0}"
   end
 
   test "still shows a warning from a file that is valid", %{tmp_dir: tmp_dir} do

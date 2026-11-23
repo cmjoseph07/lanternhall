@@ -151,15 +151,20 @@ defmodule Lanternhall.Platform.Config do
   # The file is code, so it can also throw or exit. Both are caught: an exit left alone
   # would end the caller, and Mix takes `exit({:shutdown, 0})` as success.
   defp read_file(path) do
+    file = Path.expand(path)
+
     {result, diagnostics} =
       Code.with_diagnostics(fn ->
         try do
           {:ok, Config.Reader.read!(path)}
         rescue
-          error -> {:error, one_line(Exception.message(error))}
+          error -> {:error, describe(error, __STACKTRACE__, file)}
         catch
-          :throw, value -> {:error, "it threw #{inspect(value)}"}
-          :exit, reason -> {:error, "it exited with #{inspect(reason)}"}
+          :throw, value ->
+            {:error, at_frame("it threw #{inspect(value)}", __STACKTRACE__, file)}
+
+          :exit, reason ->
+            {:error, at_frame("it exited with #{inspect(reason)}", __STACKTRACE__, file)}
         end
       end)
 
@@ -176,10 +181,33 @@ defmodule Lanternhall.Platform.Config do
       {{:error, _reason}, compile_errors} ->
         {:error,
          for %{message: message, position: position} <- compile_errors do
-           {path, "could not be read: line #{line(position)}: #{one_line(message)}"}
+           {path, "could not be read: " <> at_line(one_line(message), line(position))}
          end}
     end
   end
+
+  defp describe(%MismatchedDelimiterError{file: file} = error, _stacktrace, file),
+    do: at_line(one_line(error.description), error.end_line)
+
+  defp describe(%type{file: file} = error, _stacktrace, file)
+       when type in [SyntaxError, TokenMissingError],
+       do: at_line(one_line(error.description), error.line)
+
+  defp describe(error, stacktrace, file),
+    do: at_frame(one_line(Exception.message(error)), stacktrace, file)
+
+  defp at_frame(message, stacktrace, file) do
+    line =
+      Enum.find_value(stacktrace, fn entry ->
+        location = elem(entry, tuple_size(entry) - 1)
+        if location[:file] && Path.expand(location[:file]) == file, do: location[:line]
+      end)
+
+    at_line(message, line)
+  end
+
+  defp at_line(message, nil), do: message
+  defp at_line(message, line), do: "line #{line}: #{message}"
 
   defp line({line, _column}), do: line
   defp line(line), do: line
