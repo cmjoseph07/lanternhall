@@ -2,6 +2,7 @@ defmodule Lanternhall.ApplicationTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Adapters.SQLite3
+  alias Lanternhall.Platform.Uptime
 
   @moduletag :tmp_dir
 
@@ -18,6 +19,17 @@ defmodule Lanternhall.ApplicationTest do
     peer = boot(tmp_dir, [])
 
     refute migrated?(peer)
+  end
+
+  test "boot marks the uptime's start on the wall clock", %{tmp_dir: tmp_dir} do
+    before_boot = DateTime.utc_now()
+    peer = boot(tmp_dir, [])
+    after_boot = DateTime.utc_now()
+
+    started_at = :peer.call(peer, Uptime, :started_at, [])
+
+    refute DateTime.before?(started_at, before_boot)
+    refute DateTime.after?(started_at, after_boot)
   end
 
   defp boot(tmp_dir, os_env) do

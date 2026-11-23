@@ -68,11 +68,11 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
     end
 
     test "is the time since the app started, read again on every tick", %{conn: conn} do
-      Uptime.mark_started(System.monotonic_time(:millisecond))
+      Uptime.mark_started(DateTime.utc_now())
       {:ok, view, _html} = live(conn, ~p"/settings")
       assert has_element?(view, "#uptime", "under a minute")
 
-      Uptime.mark_started(System.monotonic_time(:millisecond) - :timer.hours(75))
+      Uptime.mark_started(DateTime.add(DateTime.utc_now(), -75, :hour))
       send(view.pid, :tick)
       assert has_element?(view, "#uptime", "3 d 3 h")
     end
