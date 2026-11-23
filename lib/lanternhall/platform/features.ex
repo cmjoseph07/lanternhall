@@ -147,7 +147,7 @@ defmodule Lanternhall.Platform.Features do
     kind: ":core, :personal or :work",
     depends_on: "a list of feature ids",
     config_keys:
-      "a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"
+      "a list of {key, validator} pairs, each key an atom listed once and each validator a 1-arity function"
   ]
 
   defp shape_problems(feature) do
@@ -166,7 +166,8 @@ defmodule Lanternhall.Platform.Features do
   defp valid_shape?(:kind, kind), do: kind in [:core, :personal, :work]
   defp valid_shape?(:depends_on, ids), do: list_of?(ids, &is_atom/1)
 
-  defp valid_shape?(:config_keys, keys), do: list_of?(keys, &config_key?/1)
+  defp valid_shape?(:config_keys, keys),
+    do: list_of?(keys, &config_key?/1) and keys == Enum.uniq_by(keys, &elem(&1, 0))
 
   defp config_key?({key, validator}), do: is_atom(key) and is_function(validator, 1)
   defp config_key?(_entry), do: false

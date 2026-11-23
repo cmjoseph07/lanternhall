@@ -27,7 +27,7 @@ defmodule Lanternhall.Platform.Feature do
   @doc "Feature ids this feature may call; each must be `:core` or of the same kind."
   @callback depends_on() :: [id()]
 
-  @doc "Keys this feature adds to the install config, each with its validator."
+  @doc "Keys this feature adds to the install config, each listed once with its validator."
   @callback config_keys() :: [{atom(), validator()}]
 
   @doc """

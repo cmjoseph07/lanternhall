@@ -78,7 +78,7 @@ defmodule Lanternhall.Platform.FeaturesTest do
                   {"the feature registry",
                    "has Lanternhall.Fixtures.Features.Invalid.BadShapes.depends_on/0 return :fixture_core; it must be a list of feature ids"},
                   {"the feature registry",
-                   "has Lanternhall.Fixtures.Features.Invalid.BadShapes.config_keys/0 return [fixture_bad: :not_a_function]; it must be a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"}
+                   "has Lanternhall.Fixtures.Features.Invalid.BadShapes.config_keys/0 return [fixture_bad: :not_a_function]; it must be a list of {key, validator} pairs, each key an atom listed once and each validator a 1-arity function"}
                 ]}
     end
 
@@ -87,7 +87,16 @@ defmodule Lanternhall.Platform.FeaturesTest do
                {:error,
                 [
                   {"the feature registry",
-                   "has Lanternhall.Fixtures.Features.Invalid.BareConfigKey.config_keys/0 return [:fixture_bare]; it must be a list of {key, validator} pairs, each key an atom and each validator a 1-arity function"}
+                   "has Lanternhall.Fixtures.Features.Invalid.BareConfigKey.config_keys/0 return [:fixture_bare]; it must be a list of {key, validator} pairs, each key an atom listed once and each validator a 1-arity function"}
+                ]}
+    end
+
+    test "refuses a config key that one feature lists twice" do
+      assert Features.validate([Invalid.KeyTwice]) ==
+               {:error,
+                [
+                  {"the feature registry",
+                   "has Lanternhall.Fixtures.Features.Invalid.KeyTwice.config_keys/0 return [fixture_twice: &Lanternhall.Fixtures.Features.Invalid.KeyTwice.first/1, fixture_twice: &Lanternhall.Fixtures.Features.Invalid.KeyTwice.second/1]; it must be a list of {key, validator} pairs, each key an atom listed once and each validator a 1-arity function"}
                 ]}
     end
 
