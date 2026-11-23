@@ -1,8 +1,9 @@
 defmodule Lanternhall.Platform.Features do
   @moduledoc """
   Problems are data, like the config's own: `{"the feature registry", reason}` for a broken
-  registry (a code problem, so it is named as the registry and not as an install key) and
-  `{:modules, reason}` for an install that enables the wrong modules.
+  registry (a code problem, so it is named as the registry and not as an install key),
+  `{:modules, reason}` for an install that enables the wrong modules and `{key, reason}`
+  for an install key outside the platform's own.
   """
 
   alias Lanternhall.Platform.{Config, Feature}
@@ -39,18 +40,6 @@ defmodule Lanternhall.Platform.Features do
   end
 
   @doc """
-  The problem with `feature`'s validator for install config key `key`, which returned
-  `result`: a shape the behaviour does not name. Only running the validator shows it, so
-  `Lanternhall.Platform.Config` reports it when it checks the key.
-  """
-  @spec bad_validator(module(), atom(), term()) :: Config.error()
-  def bad_validator(feature, key, result) do
-    {@registry,
-     "has #{inspect(feature)}'s validator for #{inspect(key)} return #{inspect(result)}; " <>
-       "it must return {:ok, value} or {:error, reason}, the reason a string"}
-  end
-
-  @doc """
   The enabled set for an install of `kind` listing `modules`: every `:core` feature plus
   the listed ones, in registry order. Each listed id must be a known optional feature
   allowed on `kind`, with its dependencies enabled. Expects a registry that passed
@@ -71,6 +60,36 @@ defmodule Lanternhall.Platform.Features do
       errors -> {:error, errors}
     end
   end
+
+  @doc """
+  Checks `entries`, the install's entries outside the platform's own keys, against the
+  `enabled` set `resolve/3` returned: each enabled feature's validators run on its keys,
+  and a key of no feature, or of a feature that is not enabled, is refused. Returns the
+  validators' values by key.
+
+  A validator that returns a shape the behaviour does not name is a registry problem that
+  only running it shows, so it is reported here and not by `validate/1`.
+  """
+  @spec check_keys([module()], [module()], keyword()) ::
+          {:ok, %{optional(atom()) => term()}} | {:error, [Config.error()]}
+  def check_keys(features, enabled, entries) do
+    results =
+      for feature <- enabled, {key, validator} <- feature.config_keys() do
+        {key, feature, run_validator(validator, Keyword.get_values(entries, key))}
+      end
+
+    case Enum.flat_map(results, &validator_error/1) ++ stray_keys(features, enabled, entries) do
+      [] -> {:ok, Map.new(results, fn {key, _feature, {:ok, value}} -> {key, value} end)}
+      errors -> {:error, errors}
+    end
+  end
+
+  @doc """
+  The problems of `entries` that need no enabled set: the keys no feature in the registry
+  owns. `check_keys/3` reports them too.
+  """
+  @spec unknown_keys([module()], keyword()) :: [Config.error()]
+  def unknown_keys(features, entries), do: stray_keys(features, features, entries)
 
   @doc """
   Whether feature `id` is in the enabled set stored at boot. Raises for an id no feature
@@ -186,6 +205,38 @@ defmodule Lanternhall.Platform.Features do
   end
 
   defp enabled?(feature, modules), do: feature.kind() == :core or feature.id() in modules
+
+  defp run_validator(_validator, [_, _ | _]), do: {:error, "is set more than once"}
+  defp run_validator(validator, []), do: validator.(:error)
+  defp run_validator(validator, [value]), do: validator.({:ok, value})
+
+  defp validator_error({_key, _feature, {:ok, _value}}), do: []
+
+  defp validator_error({key, _feature, {:error, reason}}) when is_binary(reason),
+    do: [{key, reason}]
+
+  defp validator_error({key, feature, result}) do
+    [
+      {@registry,
+       "has #{inspect(feature)}'s validator for #{inspect(key)} return #{inspect(result)}; " <>
+         "it must return {:ok, value} or {:error, reason}, the reason a string"}
+    ]
+  end
+
+  defp stray_keys(features, enabled, entries) do
+    owners =
+      for feature <- features, {key, _} <- feature.config_keys(), into: %{}, do: {key, feature}
+
+    for key <- Enum.uniq(Keyword.keys(entries)),
+        reason = stray_key(owners[key], enabled),
+        do: {key, reason}
+  end
+
+  defp stray_key(nil, _enabled), do: "is not a known key"
+
+  defp stray_key(owner, enabled) do
+    if owner not in enabled, do: "belongs to #{inspect(owner.id())}, which is not enabled"
+  end
 
   defp module_problem(nil, _kind, _modules, _by_id), do: "is not a known module"
 

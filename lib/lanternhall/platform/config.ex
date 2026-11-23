@@ -253,68 +253,33 @@ defmodule Lanternhall.Platform.Config do
   defp validate_keys(install, env, features) do
     platform = Enum.map(@known, &{&1, validate_key(&1, Keyword.get_values(install, &1), env)})
     fields = for {key, {:ok, value}} <- platform, into: %{}, do: {key, value}
-    {enabled, module_errors} = enabled_features(fields, features)
 
-    feature_keys =
-      for feature <- enabled || [], {key, validator} <- feature.config_keys() do
-        {key, feature, validate_feature_key(validator, Keyword.get_values(install, key))}
-      end
+    {feature_fields, feature_errors} =
+      feature_fields(fields, features, Keyword.drop(install, @known))
 
-    errors =
-      errors(platform) ++
-        module_errors ++
-        Enum.flat_map(feature_keys, &feature_key_error/1) ++
-        unknown_keys(install, enabled, features)
-
-    case errors do
-      [] ->
-        feature_config = Map.new(feature_keys, fn {key, _, {:ok, value}} -> {key, value} end)
-        {:ok, Map.merge(fields, %{features: enabled, feature_config: feature_config})}
-
-      errors ->
-        {:error, errors}
+    case errors(platform) ++ feature_errors do
+      [] -> {:ok, Map.merge(fields, feature_fields)}
+      errors -> {:error, errors}
     end
   end
 
   defp errors(results), do: for({key, {:error, reason}} <- results, do: {key, reason})
 
-  defp feature_key_error({_key, _feature, {:ok, _value}}), do: []
-
-  defp feature_key_error({key, _feature, {:error, reason}}) when is_binary(reason),
-    do: [{key, reason}]
-
-  defp feature_key_error({key, feature, result}),
-    do: [Features.bad_validator(feature, key, result)]
-
-  defp enabled_features(%{kind: kind, modules: modules}, features) do
+  defp feature_fields(%{kind: kind, modules: modules}, features, entries) do
     case Features.resolve(features, kind, modules) do
-      {:ok, enabled} -> {enabled, []}
-      {:error, errors} -> {nil, errors}
+      {:ok, enabled} ->
+        case Features.check_keys(features, enabled, entries) do
+          {:ok, feature_config} -> {%{features: enabled, feature_config: feature_config}, []}
+          {:error, errors} -> {%{}, errors}
+        end
+
+      {:error, errors} ->
+        {%{}, errors ++ Features.unknown_keys(features, entries)}
     end
   end
 
-  defp enabled_features(_fields, _features), do: {nil, []}
-
-  defp unknown_keys(install, enabled, features) do
-    owners =
-      for feature <- features, {key, _} <- feature.config_keys(), into: %{}, do: {key, feature}
-
-    for {key, _} <- Enum.uniq_by(install, &elem(&1, 0)),
-        key not in @known,
-        reason = unknown_key(owners[key], enabled),
-        do: {key, reason}
-  end
-
-  defp unknown_key(nil, _enabled), do: "is not a known key"
-  defp unknown_key(_owner, nil), do: nil
-
-  defp unknown_key(owner, enabled) do
-    if owner not in enabled, do: "belongs to #{inspect(owner.id())}, which is not enabled"
-  end
-
-  defp validate_feature_key(_validator, [_, _ | _]), do: {:error, "is set more than once"}
-  defp validate_feature_key(validator, []), do: validator.(:error)
-  defp validate_feature_key(validator, [value]), do: validator.({:ok, value})
+  defp feature_fields(_fields, features, entries),
+    do: {%{}, Features.unknown_keys(features, entries)}
 
   defp validate_key(_key, [_, _ | _], _env), do: {:error, "is set more than once"}
 

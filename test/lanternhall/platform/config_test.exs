@@ -506,11 +506,42 @@ defmodule Lanternhall.Platform.ConfigTest do
              ]
     end
 
+    test "a disabled feature's key written twice is named once", %{tmp_dir: tmp_dir} do
+      install = valid_install() ++ [fixture_greeting: "hello", fixture_greeting: "again"]
+
+      assert errors_for(tmp_dir, install) == [
+               {:fixture_greeting, "belongs to :fixture_personal, which is not enabled"}
+             ]
+    end
+
+    test "validator problems come first, then misplaced keys in file order",
+         %{tmp_dir: tmp_dir} do
+      install = [extra: true, fixture_greeting: "hello", fixture_level: 0] ++ valid_install()
+
+      assert errors_for(tmp_dir, install) == [
+               {:fixture_level, "must be a positive integer, got 0"},
+               {:extra, "is not a known key"},
+               {:fixture_greeting, "belongs to :fixture_personal, which is not enabled"}
+             ]
+    end
+
     test "feature keys wait until kind and modules are valid", %{tmp_dir: tmp_dir} do
       install = Keyword.put(valid_install(), :kind, :home) ++ [fixture_greeting: "hello"]
 
       assert errors_for(tmp_dir, install) == [
                {:kind, "must be :personal or :work, got :home"}
+             ]
+    end
+
+    test "feature keys wait when a listed module is refused; a key of no feature is still named",
+         %{tmp_dir: tmp_dir} do
+      install =
+        Keyword.put(valid_install(), :modules, [:habits]) ++
+          [fixture_greeting: "hello", fixture_level: 0, extra: true]
+
+      assert errors_for(tmp_dir, install) == [
+               {:modules, "contains :habits, which is not a known module"},
+               {:extra, "is not a known key"}
              ]
     end
 
