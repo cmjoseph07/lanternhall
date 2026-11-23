@@ -1,6 +1,8 @@
 defmodule LanternhallWeb.Brand.PWATest do
   use LanternhallWeb.ConnCase, async: true
 
+  @repo_root Path.expand("../../..", __DIR__)
+
   @files [
     {"/images/favicon.svg", "image/svg+xml"},
     {"/images/favicon-32.png", "image/png"},
@@ -91,18 +93,25 @@ defmodule LanternhallWeb.Brand.PWATest do
   # which is why this checks the source and not a response.
   test "no template links a root-level static file through a digesting helper" do
     root_files =
-      Enum.filter(LanternhallWeb.static_paths(), &File.regular?(Path.join("priv/static", &1)))
+      Enum.filter(
+        LanternhallWeb.static_paths(),
+        &File.regular?(Path.join([@repo_root, "priv/static", &1]))
+      )
 
     assert "manifest.webmanifest" in root_files
 
     digested =
       ~r{(~p|static_(path|url|integrity)\([^)]*)"/(#{Enum.map_join(root_files, "|", &Regex.escape/1)})}
 
+    paths = Path.wildcard(Path.join(@repo_root, "lib/lanternhall_web/**/*.{ex,heex}"))
+
+    assert paths != []
+
     offenders =
-      for path <- Path.wildcard("lib/lanternhall_web/**/*.{ex,heex}"),
+      for path <- paths,
           {line, number} <- path |> File.read!() |> String.split("\n") |> Enum.with_index(1),
           line =~ digested,
-          do: "#{path}:#{number}"
+          do: "#{Path.relative_to(path, @repo_root)}:#{number}"
 
     assert offenders == []
   end
