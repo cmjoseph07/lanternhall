@@ -56,7 +56,7 @@ defmodule Lanternhall.Platform.Features do
       end
 
     case errors do
-      [] -> {:ok, Enum.filter(features, &enabled?(&1, modules))}
+      [] -> {:ok, Enum.filter(features, &core_or_listed?(&1, modules))}
       errors -> {:error, errors}
     end
   end
@@ -204,7 +204,7 @@ defmodule Lanternhall.Platform.Features do
     Code.ensure_loaded?(feature) and function_exported?(feature, function, arity)
   end
 
-  defp enabled?(feature, modules), do: feature.kind() == :core or feature.id() in modules
+  defp core_or_listed?(feature, modules), do: feature.kind() == :core or feature.id() in modules
 
   defp run_validator(_validator, [_, _ | _]), do: {:error, "is set more than once"}
   defp run_validator(validator, []), do: validator.(:error)
@@ -248,7 +248,7 @@ defmodule Lanternhall.Platform.Features do
       feature.kind() != kind ->
         "is not allowed on a #{inspect(kind)} install"
 
-      missing = Enum.find(feature.depends_on(), &(not enabled?(by_id[&1], modules))) ->
+      missing = Enum.find(feature.depends_on(), &(not core_or_listed?(by_id[&1], modules))) ->
         "depends on #{inspect(missing)}, which is not enabled"
 
       true ->
