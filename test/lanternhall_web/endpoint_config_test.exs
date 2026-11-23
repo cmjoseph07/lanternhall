@@ -71,6 +71,20 @@ defmodule LanternhallWeb.EndpointConfigTest do
     end
   end
 
+  test "prod serves HTTP when PHX_SERVER is set", %{install: install} do
+    vars = %{"LANTERNHALL_CONFIG" => install, "PHX_SERVER" => "true"}
+    endpoint = runtime_config(:prod, vars)[:lanternhall][LanternhallWeb.Endpoint]
+
+    assert endpoint[:server] == true
+  end
+
+  test "prod leaves `server` unset when PHX_SERVER is unset", %{install: install} do
+    vars = %{"LANTERNHALL_CONFIG" => install, "PHX_SERVER" => nil}
+    endpoint = runtime_config(:prod, vars)[:lanternhall][LanternhallWeb.Endpoint]
+
+    refute Keyword.has_key?(endpoint, :server)
+  end
+
   describe "database" do
     test "dev, test and prod each use their own file", %{install: install} do
       databases =
