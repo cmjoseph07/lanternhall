@@ -46,7 +46,7 @@ defmodule Lanternhall.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, e2e: :test]
     ]
   end
 
@@ -141,7 +141,8 @@ defmodule Lanternhall.MixProject do
         "cmd pnpm --dir assets exec biome check --error-on-warnings js scripts",
         "cmd pnpm --dir assets run hooks ../_build/#{Mix.env()}",
         "test --exclude e2e --cover --warnings-as-errors"
-      ]
+      ],
+      e2e: "test --only e2e --warnings-as-errors"
     ]
   end
 end

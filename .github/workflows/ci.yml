@@ -180,13 +180,11 @@ jobs:
             exit 1
           fi
 
-      - name: Build assets
-        run: |
-          mix assets.setup
-          mix assets.build
+      - name: Install Tailwind and esbuild
+        run: mix assets.setup
 
       - name: E2E tests
-        run: mix test --only e2e --warnings-as-errors
+        run: mix e2e
 
   macos:
     name: macOS (compile, tests, prod release)
