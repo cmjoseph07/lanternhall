@@ -7,6 +7,5 @@ defmodule LanternhallWeb.E2E.Platform.LandingTest do
     |> visit(~p"/")
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_has("#app-version", text: Lanternhall.version())
-    |> assert_clean_browser()
   end
 end

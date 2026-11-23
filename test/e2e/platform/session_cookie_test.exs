@@ -19,6 +19,8 @@ defmodule LanternhallWeb.E2E.Platform.SessionCookieTest do
   # session, LiveView refused the join and the page reloaded without end. A value set
   # on `window` lives as long as the document, so it is gone after a reload.
   @tag :capture_log
+  @tag browser_errors:
+         ~r/failed: Error during WebSocket handshake: Unexpected response code: 400$/
   test "a second session cookie with Path=/live stops the socket, and the page stays",
        %{conn: conn} do
     conn =

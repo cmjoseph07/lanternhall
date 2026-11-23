@@ -8,6 +8,5 @@ defmodule LanternhallWeb.E2E.Platform.SettingsInstallTest do
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_has("#install-kind", text: "personal")
     |> assert_has("#uptime")
-    |> assert_clean_browser()
   end
 end

@@ -3,22 +3,20 @@ defmodule LanternhallWeb.E2ECase do
   Real-browser test case: `PhoenixTest.Playwright.Case` in headless Chromium
   against the test server at http://localhost:4002, tagged `:e2e`.
 
-  Each test's browser page is watched from its first request: console errors,
-  uncaught page errors and Content-Security-Policy violations are collected,
-  and `assert_clean_browser/1` fails the test if any happened.
+  Every page of a test's browser context is watched from its first request, and the
+  test fails when it ends if a console error or an uncaught page error happened in
+  any of them. Chromium reports a Content-Security-Policy violation as a console error.
+
+  `@tag browser_errors: [...]` lists the errors a test expects, in order, such as the
+  browser's own report of a 404 page; the errors must match it exactly.
+  `@tag browser_errors: ~r/.../` is for an error whose text or count varies: at least
+  one error happened and every error matches.
   """
   use ExUnit.CaseTemplate
 
+  alias LanternhallWeb.BrowserWatcher
   alias PhoenixTest.Playwright
   alias PlaywrightEx.BrowserContext
-
-  # Runs in the page before any of its own scripts, outside the page's CSP.
-  @record_csp_violations """
-  window.__cspViolations = [];
-  document.addEventListener("securitypolicyviolation", (e) => {
-    window.__cspViolations.push(`${e.effectiveDirective} blocked ${e.blockedURI || "inline"}`);
-  });
-  """
 
   using do
     quote do
@@ -35,56 +33,44 @@ defmodule LanternhallWeb.E2ECase do
   end
 
   @doc """
-  Subscribes the test process to the page's console and page error events and
-  records CSP violations in the page.
+  Watches the test's browser context and, when the test ends, asserts its errors
+  are the ones under the `:browser_errors` tag.
   """
-  def watch_browser(%{conn: conn}) do
-    :ok = PlaywrightEx.subscribe(conn.context_id)
-    :ok = PlaywrightEx.subscribe(conn.page_id)
+  def watch_browser(%{conn: conn} = context) do
+    {:ok, watcher} = BrowserWatcher.start(conn)
 
-    {:ok, _} =
-      BrowserContext.add_init_script(conn.context_id,
-        source: @record_csp_violations,
-        timeout: Playwright.Config.global(:timeout)
-      )
+    on_exit(fn ->
+      try do
+        assert_browser_errors(watcher, Map.get(context, :browser_errors, []))
+      after
+        BrowserWatcher.stop(watcher)
+      end
+    end)
 
-    :ok
+    [browser_watcher: watcher]
   end
 
   @doc """
-  Asserts the current page saw no CSP violation, and that no console error
-  or uncaught page error happened since the test started.
-
-  `expect_errors:` lists the console errors a test expects, in order, such as the
-  browser's own report of a 404 page; the errors must match it exactly.
+  Asserts the console errors and uncaught page errors of every page so far.
   """
-  def assert_clean_browser(conn, opts \\ []) do
-    Playwright.evaluate(conn, "window.__cspViolations", fn violations ->
-      assert violations == [], "CSP violations: #{inspect(violations)}"
-    end)
+  def assert_browser_errors(watcher, %Regex{} = pattern) do
+    errors = BrowserWatcher.errors(watcher)
 
-    # The evaluate round trip above passed every earlier browser event to this process.
-    errors = browser_errors([])
-    assert errors == Keyword.get(opts, :expect_errors, []), "Browser errors: #{inspect(errors)}"
-
-    conn
+    assert errors != []
+    assert Enum.reject(errors, &(&1 =~ pattern)) == []
   end
 
-  defp browser_errors(acc) do
-    receive do
-      {:playwright_msg, %{method: :console, params: %{type: "error"} = params}} ->
-        browser_errors([params.text | acc])
+  def assert_browser_errors(watcher, expected) do
+    assert BrowserWatcher.errors(watcher) == expected
+  end
 
-      {:playwright_msg, %{method: :page_error, params: %{error: %{error: error}}}} ->
-        browser_errors(["#{error[:name]}: #{error[:message]}" | acc])
+  @doc """
+  Opens another page in the browser context of `conn` and returns a session on it.
+  """
+  def open_tab(conn) do
+    {:ok, page} =
+      BrowserContext.new_page(conn.context_id, timeout: Playwright.Config.global(:timeout))
 
-      {:playwright_msg, %{method: :page_error, params: params}} ->
-        browser_errors([inspect(params) | acc])
-
-      {:playwright_msg, _other} ->
-        browser_errors(acc)
-    after
-      0 -> Enum.reverse(acc)
-    end
+    %{conn | page_id: page.guid, frame_id: page.main_frame.guid}
   end
 end

@@ -38,7 +38,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
       end)
       |> Playwright.click("#theme-toggle button[data-phx-theme=light]")
       |> assert_has("html[data-theme=lanternhall-light]")
-      |> assert_clean_browser()
     end
   end
 
@@ -71,7 +70,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
                  do: %{"flash" => flash, "regions" => ["flash-group polite"], "close" => "Close"}
                )
     end)
-    |> assert_clean_browser()
   end
 
   @flashes_after_close """
@@ -101,7 +99,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
         fn flashes -> assert flashes == [unquote(kept)] end
       )
       |> assert_has(unquote(kept))
-      |> assert_clean_browser()
     end
   end
 
@@ -117,7 +114,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     |> Playwright.evaluate("window.liveSocket.connect()")
     |> assert_has("[data-phx-main].phx-connected")
     |> refute_has("#client-error")
-    |> assert_clean_browser()
   end
 
   # LiveView sends `phx:show-end` when the show transition's time is up and takes the
@@ -161,7 +157,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
       assert notice == flash
     end)
     |> assert_has("#client-error")
-    |> assert_clean_browser()
   end
 
   # The page rejoins by itself about half a second after the notice shows, too short to
@@ -192,7 +187,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     |> assert_has("[data-phx-main].phx-connected")
     |> refute_has("#server-error")
     |> refute_has("#client-error")
-    |> assert_clean_browser()
   end
 
   defp kill_live_view(conn) do

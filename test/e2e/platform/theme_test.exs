@@ -51,7 +51,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_first_frame(@dark)
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_pressed("dark")
-    |> assert_clean_browser()
   end
 
   test "an unknown stored theme renders dark from the first frame", %{conn: conn} do
@@ -62,7 +61,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_first_frame(@dark)
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_pressed("dark")
-    |> assert_clean_browser()
   end
 
   test "a light choice survives reload with no dark frame, and dark survives with no light frame",
@@ -81,7 +79,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_has("html[data-theme=#{@dark}]")
     |> visit(~p"/")
     |> assert_first_frame(@dark)
-    |> assert_clean_browser()
   end
 
   test "system follows the operating system's color scheme and survives reload",
@@ -95,7 +92,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_first_frame(@light)
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_pressed("system")
-    |> assert_clean_browser()
   end
 
   test "system follows a live change of the operating system's color scheme", %{conn: conn} do
@@ -109,7 +105,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_pressed("system")
     |> emulate_color_scheme("light")
     |> assert_has("html[data-theme=#{@light}]")
-    |> assert_clean_browser()
   end
 
   test "system with a dark operating system renders dark from the first frame", %{conn: conn} do
@@ -122,7 +117,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_first_frame(@dark)
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_pressed("system")
-    |> assert_clean_browser()
   end
 
   test "a light or dark choice ignores the operating system's color scheme", %{conn: conn} do
@@ -137,7 +131,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> emulate_color_scheme("light")
     |> assert_has("html[data-theme=#{@dark}]")
     |> assert_pressed("dark")
-    |> assert_clean_browser()
   end
 
   test "a choice made in one tab applies to the app's other open tabs", %{conn: conn} do
@@ -154,7 +147,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     conn
     |> assert_has("html[data-theme=#{@light}]")
     |> assert_pressed("light")
-    |> assert_clean_browser()
   end
 
   test "clearing the site's storage in one tab returns the other open tabs to the default",
@@ -176,7 +168,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     conn
     |> assert_has("html[data-theme=#{@dark}]")
     |> assert_pressed("dark")
-    |> assert_clean_browser()
   end
 
   test "the pressed button survives losing and regaining the connection", %{conn: conn} do
@@ -190,11 +181,12 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> Playwright.evaluate("window.liveSocket.connect()")
     |> assert_has("[data-phx-main].phx-connected")
     |> assert_pressed("light")
-    |> assert_clean_browser()
   end
 
   # The page's expected error is also written to the test log; show it only on failure.
   @tag :capture_log
+  # One error only: LiveView's, reading storage as app.js starts.
+  @tag browser_errors: ["SecurityError: Access is denied for this document."]
   test "with site storage blocked the page still renders its theme from the first frame",
        %{conn: conn} do
     # What Chromium does when site data is blocked: reading either storage throws. It
@@ -218,8 +210,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> visit(~p"/")
     |> assert_first_frame(@dark)
     |> assert_has("html[data-theme-choice=dark]")
-    # One error only: LiveView's, reading storage as app.js starts.
-    |> assert_clean_browser(expect_errors: ["SecurityError: Access is denied for this document."])
   end
 
   test "with localStorage full the toggle still switches the theme", %{conn: conn} do
@@ -245,7 +235,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> choose_theme("light")
     |> assert_has("html[data-theme=#{@light}]")
     |> assert_pressed("light")
-    |> assert_clean_browser()
   end
 
   test "the toggle's buttons are named for screen readers", %{conn: conn} do
@@ -262,7 +251,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     conn
     |> visit(~p"/")
     |> assert_has("#theme-toggle[role=group][aria-label=Theme]")
-    |> assert_clean_browser()
   end
 
   @text_pairs (for base <- ~w(base-100 base-200 base-300),
@@ -325,7 +313,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
         assert failures == []
       end
     )
-    |> assert_clean_browser()
   end
 
   # WCAG 2.2 AA as each page renders, measured in the browser once animations and
@@ -430,7 +417,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_has("[data-phx-main].phx-connected")
     |> choose_theme("light")
     |> assert_pages_contrast(@light)
-    |> assert_clean_browser()
   end
 
   test "the logo is inline and its wordmark follows the theme's text color", %{conn: conn} do
@@ -480,7 +466,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
         assert result["mono"] =~ ~r/^ui-monospace, /
       end
     )
-    |> assert_clean_browser()
   end
 
   defp choose_theme(conn, choice),
@@ -514,13 +499,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
 
     refute Map.has_key?(reply, :error), "emulateMedia failed: #{inspect(reply)}"
     Playwright.evaluate(conn, "window.__schemeChanged.then(() => true)", &assert(&1))
-  end
-
-  defp open_tab(conn) do
-    {:ok, page} =
-      BrowserContext.new_page(conn.context_id, timeout: Playwright.Config.global(:timeout))
-
-    %{conn | page_id: page.guid, frame_id: page.main_frame.guid}
   end
 
   defp assert_first_frame(conn, theme) do

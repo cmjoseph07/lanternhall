@@ -20,6 +20,7 @@ defmodule Lanternhall.MixProject do
           # `use LanternhallWeb.DevRoutes`; runtime coverage can never reach them.
           LanternhallWeb,
           LanternhallWeb.DevRoutes,
+          LanternhallWeb.BrowserWatcher,
           LanternhallWeb.ConnCase,
           LanternhallWeb.E2ECase,
           LanternhallWeb.RawHTTP,

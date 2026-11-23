@@ -60,7 +60,6 @@ defmodule LanternhallWeb.E2E.Platform.PWATest do
       """,
       fn sizes -> assert sizes == Enum.map(icons, &List.last/1) end
     )
-    |> assert_clean_browser()
   end
 
   # PlaywrightEx has no function for a Chrome DevTools Protocol session yet, so these

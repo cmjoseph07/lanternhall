@@ -21,6 +21,5 @@ defmodule LanternhallWeb.E2E.Platform.NavigationTest do
     |> assert_has("#fixture-core")
     |> assert_has("[data-phx-main].phx-connected")
     |> Playwright.evaluate("window.__doc", &assert(&1 == 1))
-    |> assert_clean_browser()
   end
 end
