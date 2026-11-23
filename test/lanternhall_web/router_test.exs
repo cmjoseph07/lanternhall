@@ -1,18 +1,19 @@
 defmodule LanternhallWeb.RouterTest do
-  use LanternhallWeb.ConnCase, async: true
+  use LanternhallWeb.ConnCase, async: false
 
   alias Lanternhall.Platform.Features
-  alias LanternhallWeb.{FeatureGate, Router}
+  alias LanternhallWeb.{DisabledFeatureError, FeatureGate, Router}
 
-  @platform_pages ~w(/ /settings)
+  @platform_routes ~w(/ /settings /healthz)
 
   defp pipeline_status(verb, path) do
-    path = String.replace(path, ~r"/[:*][^/]+", "/1")
-    conn = build_conn() |> bypass_through(Router) |> dispatch(@endpoint, verb, path)
+    conn = build_conn() |> bypass_through(Router) |> dispatch(@endpoint, verb, concrete(path))
     conn.status || 200
   rescue
     error -> Plug.Exception.status(error)
   end
+
+  defp concrete(path), do: String.replace(path, ~r"/[:*][^/]+", "/1")
 
   test "every route's pipelines run without a server error, gate plugs included" do
     statuses =
@@ -31,29 +32,62 @@ defmodule LanternhallWeb.RouterTest do
   # A navigate between two `live_session`s is a full page load, so every LiveView sits
   # in the same one.
   test "every LiveView is in one live_session" do
-    sessions = for {path, _view, %{name: name}} <- live_routes(), do: {path, name}
+    sessions =
+      for %{path: path, metadata: %{phoenix_live_view: {_view, _action, _opts, %{name: name}}}} <-
+            Router.__routes__(),
+          do: {path, name}
 
     assert sessions != []
     assert sessions |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> length() == 1, inspect(sessions)
   end
 
-  # A live navigation runs no router pipeline, so a feature's LiveView holds the gate
-  # itself, as `on_mount`. The platform's own pages are the only ones without a gate.
-  test "every LiveView outside the platform's pages mounts a gate that names a feature" do
-    ids = Enum.map(Features.all(), & &1.id())
+  describe "with every feature disabled" do
+    setup context do
+      put_install(context, features: [])
+    end
 
-    gates =
-      for {path, view, _session} <- live_routes(), path not in @platform_pages do
-        {path, for(%{id: {FeatureGate, id}} <- view.__live__().lifecycle.mount, do: id)}
-      end
+    test "the first pipeline of every route outside the platform's own refuses a feature" do
+      refused =
+        for route <- feature_routes(), do: {route.verb, route.path, refused_feature(route)}
 
-    assert for({path, gate} <- gates, gate == [] or gate -- ids != [], do: path) == []
-    assert {"/fixtures/personal", [:fixture_personal]} in gates
+      assert for({verb, path, nil} <- refused, do: {verb, path}) == []
+      assert {:post, "/fixtures/core/plain", :fixture_core} in refused
+      assert {:get, "/fixtures/personal", :fixture_personal} in refused
+    end
+
+    # A live navigation runs no router pipeline, so a feature's LiveView holds the gate
+    # itself, as `on_mount`.
+    test "every LiveView outside the platform's pages mounts the gate of its route's feature" do
+      gates =
+        for %{metadata: %{phoenix_live_view: {view, _action, _opts, _session}}} = route <-
+              feature_routes() do
+          mounted = for %{id: {FeatureGate, id}} <- view.__live__().lifecycle.mount, do: id
+          {route.path, refused_feature(route), mounted}
+        end
+
+      assert for({path, feature, mounted} <- gates, mounted != [feature], do: path) == []
+      assert {"/fixtures/personal", :fixture_personal, [:fixture_personal]} in gates
+    end
   end
 
-  defp live_routes do
-    for %{path: path, metadata: %{phoenix_live_view: {view, _action, _opts, session}}} <-
-          Router.__routes__(),
-        do: {path, view, session}
+  defp feature_routes do
+    Enum.reject(Router.__routes__(), &(&1.path in @platform_routes))
+  end
+
+  defp refused_feature(%{verb: verb, path: path}) do
+    method = verb |> Atom.to_string() |> String.upcase()
+
+    case Phoenix.Router.route_info(Router, method, concrete(path), "localhost") do
+      %{pipe_through: [first | _]} -> refused_by(first)
+      %{pipe_through: []} -> nil
+    end
+  end
+
+  defp refused_by(pipeline) do
+    build_conn() |> bypass_through(Router, [pipeline]) |> dispatch(@endpoint, :get, "/")
+    nil
+  rescue
+    error in DisabledFeatureError ->
+      Enum.find(Features.all(), &(DisabledFeatureError.exception(&1.id()) == error)).id()
   end
 end

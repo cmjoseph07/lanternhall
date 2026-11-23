@@ -4,6 +4,7 @@ defmodule LanternhallWeb.ConnCase do
   use ExUnit.CaseTemplate
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Lanternhall.Platform.Config
 
   using do
     quote do
@@ -33,5 +34,16 @@ defmodule LanternhallWeb.ConnCase do
   def build_conn do
     %URI{host: host, port: port} = LanternhallWeb.Endpoint.struct_url()
     %{Phoenix.ConnTest.build_conn() | host: host, port: port}
+  end
+
+  def put_install(%{async: false}, fields) do
+    config = Config.get()
+    store_install(struct!(config, fields))
+    on_exit(fn -> store_install(config) end)
+  end
+
+  defp store_install(config) do
+    Application.put_env(:lanternhall, :install, config)
+    Config.take_from_app_env()
   end
 end

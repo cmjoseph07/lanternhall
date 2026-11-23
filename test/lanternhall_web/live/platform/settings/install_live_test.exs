@@ -49,10 +49,8 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
   end
 
   describe "the page on a server that uses the configured port" do
-    setup do
-      config = Config.get()
-      store(%{config | port: LanternhallWeb.Endpoint.config(:http)[:port]})
-      on_exit(fn -> store(config) end)
+    setup context do
+      put_install(context, port: LanternhallWeb.Endpoint.config(:http)[:port])
     end
 
     test "shows the port without the note about another one", %{conn: conn} do
@@ -91,10 +89,5 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
       assert InstallLive.format_uptime(:timer.hours(24)) == "1 d 0 h"
       assert InstallLive.format_uptime(:timer.hours(24 * 9 + 3) + 1) == "9 d 3 h"
     end
-  end
-
-  defp store(config) do
-    Application.put_env(:lanternhall, :install, config)
-    Config.take_from_app_env()
   end
 end
