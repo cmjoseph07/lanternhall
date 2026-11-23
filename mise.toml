@@ -1,8 +1,3 @@
-# Every tool is pinned by version here and by download URL and SHA-256 in mise.lock
-# (https://mise.jdx.dev/dev-tools/mise-lock.html). After changing a version, run `mise lock`
-# and commit both files; CI installs with `mise install --locked`, which refuses a tool
-# that has no entry in the lockfile.
-
 # An older mise cannot read the lockfile's format and would install without checking it.
 min_version = "2026.11.1"
 

@@ -1,6 +1,4 @@
 defmodule LanternhallWeb.Brand.LogoSvgTest do
-  # The logo SVGs are hand-written (SPEC-platform.md section 3.8): no fonts, no raster images,
-  # no inline `style` (CSP forbids it, section 3.3), nothing loaded from elsewhere.
   use ExUnit.Case, async: true
 
   require Record
@@ -23,7 +21,6 @@ defmodule LanternhallWeb.Brand.LogoSvgTest do
   @images "priv/static/images"
   @svg_ns :"http://www.w3.org/2000/svg"
 
-  # Elements that would pull in a font, a raster, a script, CSS or another document.
   @forbidden ~w(text tspan textPath font font-face image foreignObject style script use a)
 
   for name <- ["logo.svg", "logo-mark.svg"] do

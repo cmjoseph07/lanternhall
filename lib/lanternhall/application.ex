@@ -9,7 +9,6 @@ defmodule Lanternhall.Application do
   def start(_type, _args) do
     Uptime.mark_started()
 
-    # Validated by config/runtime.exs before any app started.
     config = Config.take_from_app_env()
 
     children =
@@ -22,16 +21,13 @@ defmodule Lanternhall.Application do
       ] ++
         Features.children(config) ++
         [
-          # Last, so requests are served only once everything they need is running.
           LanternhallWeb.Endpoint
         ]
 
-    # Each child restarts on its own; the others keep running.
     opts = [strategy: :one_for_one, name: Lanternhall.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
-  # Migrations run at boot in a release only; in dev and test, Mix tasks run them.
   defp skip_migrations? do
     System.get_env("RELEASE_NAME") == nil
   end

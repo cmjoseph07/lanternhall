@@ -1,2 +1,2 @@
-# Same rule as SPEC.md section 4: only versions published at least 7 days ago (in minutes).
+# pnpm reads minimumReleaseAge in minutes (https://pnpm.io/settings#minimumreleaseage).
 minimumReleaseAge: 10080

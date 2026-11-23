@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Childless do
-  @moduledoc """
-  Synthetic `:core` feature whose `children/1` returns no children, as a feature may when
-  its config leaves it nothing to run. Not in the test registry; tests pass it in directly.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.CycleB do
-  @moduledoc """
-  Broken registry fixture: the middle of the `:fixture_cycle_a` -> `:fixture_cycle_b` ->
-  `:fixture_cycle_c` -> `:fixture_cycle_a` cycle.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

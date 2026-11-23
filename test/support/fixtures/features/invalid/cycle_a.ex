@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.CycleA do
-  @moduledoc """
-  Broken registry fixture: depends on `:fixture_cycle_b`, which depends on
-  `:fixture_cycle_c`, which depends back on it.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

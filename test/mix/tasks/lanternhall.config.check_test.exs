@@ -1,5 +1,4 @@
 defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
-  # Not async: Mix.shell/1 and the captured stderr are process-wide.
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
@@ -24,9 +23,6 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
     end
   end
 
-  # Run as the command itself: only a fresh `mix` shows what the task loads before it runs.
-  # The app is given an install config it cannot boot with, so loading the runtime config
-  # or starting the app would fail before the task could answer.
   test "checks the file it is given while the app's own install config is broken",
        %{tmp_dir: tmp_dir} do
     broken = Path.join(tmp_dir, "broken.exs")
@@ -62,7 +58,6 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
            """
   end
 
-  # What the terminal shows: the compiler's own multi-line report must not come with it.
   test "prints a compile error as its one line and nothing else", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "config.exs")
     File.write!(path, "import Config\nconfig :lanternhall, :install,\n  kind: personal\n")
@@ -89,7 +84,6 @@ defmodule Mix.Tasks.Lanternhall.Config.CheckTest do
              "lanternhall config: #{path} could not be read: it exited with {:shutdown, 0}"
   end
 
-  # A warning is not a problem with the file, so it is still shown, as Elixir shows it.
   test "still shows a warning from a file that is valid", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "config.exs")
 

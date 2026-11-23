@@ -1,18 +1,5 @@
 defmodule LanternhallWeb.Plugs.HostCheck do
-  @moduledoc """
-  Rejects every request whose `Host` is not the endpoint's own `localhost:<port>`
-  with `400` and a plain body (SPEC-platform.md section 3.3).
-
-  The app listens on loopback only, but a web page can still reach it through DNS
-  rebinding: the page's own name first resolves to the attacker's server, then to
-  `127.0.0.1`, and the browser keeps sending that name as `Host`. Only requests for
-  `localhost:<port>` get through. The host is pinned here, not read from the endpoint's
-  `url` config, so a config change cannot widen it; the port is the one the endpoint
-  listens on.
-
-  `LanternhallWeb.Endpoint.call/2` runs this before Phoenix dispatches sockets, so
-  LiveView WebSocket upgrades are checked too.
-  """
+  @moduledoc false
   @behaviour Plug
 
   import Plug.Conn

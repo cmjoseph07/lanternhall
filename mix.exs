@@ -20,8 +20,6 @@ defmodule Lanternhall.MixProject do
           # `use LanternhallWeb.DevRoutes`; runtime coverage can never reach them.
           LanternhallWeb,
           LanternhallWeb.DevRoutes,
-          # Test support in test/support is not the app: the gate measures how much of
-          # the app the tests run, and support code would count towards it.
           LanternhallWeb.ConnCase,
           LanternhallWeb.E2ECase,
           LanternhallWeb.RawHTTP,
@@ -38,9 +36,6 @@ defmodule Lanternhall.MixProject do
     ]
   end
 
-  # Configuration for the OTP application.
-  #
-  # Type `mix help compile.app` for more information.
   def application do
     [
       mod: {Lanternhall.Application, []},
@@ -58,8 +53,6 @@ defmodule Lanternhall.MixProject do
     [lanternhall: [steps: [&require_digested_assets/1, :assemble]]]
   end
 
-  # With `cache_static_manifest` set (config/prod.exs), the release serves only digested
-  # assets; built without them it boots fine but every page loads with no CSS or JS.
   defp require_digested_assets(release) do
     manifest = Application.get_env(:lanternhall, LanternhallWeb.Endpoint)[:cache_static_manifest]
 
@@ -70,13 +63,9 @@ defmodule Lanternhall.MixProject do
     release
   end
 
-  # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Specifies your project dependencies.
-  #
-  # Type `mix help deps` for examples and options.
   defp deps do
     [
       {:phoenix, "== 1.8.17"},
@@ -119,12 +108,6 @@ defmodule Lanternhall.MixProject do
     ]
   end
 
-  # Aliases are shortcuts or tasks specific to the current project.
-  # For example, to install project dependencies and perform other setup tasks, run:
-  #
-  #     $ mix setup
-  #
-  # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
@@ -155,8 +138,6 @@ defmodule Lanternhall.MixProject do
         "credo",
         "sobelow --config",
         "cmd pnpm --dir assets exec biome check --error-on-warnings js scripts",
-        # Colocated hooks, as the compile step above just extracted them from HEEx; the
-        # script hands Biome a copy of each without the template's indentation.
         "cmd pnpm --dir assets run hooks ../_build/#{Mix.env()}",
         "test --exclude e2e --cover --warnings-as-errors"
       ]

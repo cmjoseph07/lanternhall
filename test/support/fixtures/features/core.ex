@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Core do
-  @moduledoc """
-  Synthetic `:core` feature: always enabled, supervises one child and owns an optional
-  config key with a default.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true
@@ -19,7 +16,6 @@ defmodule Lanternhall.Fixtures.Features.Core do
 
   @impl true
   def children(config) do
-    # Default child id `Agent`, the same as the other fixture's, as unrelated features' ids may be.
     [{Agent, fn -> config.feature_config.fixture_level end}]
   end
 

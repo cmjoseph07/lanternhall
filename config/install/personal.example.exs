@@ -1,7 +1,6 @@
 # Example install config for a personal machine (SPEC.md section 5 "Config").
 # Copy it to ~/.config/lanternhall/config.exs, or point LANTERNHALL_CONFIG at your copy,
 # then check it with `mix lanternhall.config.check <path>`.
-# Dev and test boot with this file unless LANTERNHALL_CONFIG is set.
 # It holds no secrets: credentials live encrypted in the database.
 import Config
 

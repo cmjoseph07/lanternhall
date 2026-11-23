@@ -1,17 +1,9 @@
-# Compile-time configuration shared by every environment. The environment's own file
-# (dev.exs, test.exs or prod.exs) is imported at the bottom and overrides it; runtime.exs
-# runs at boot.
 import Config
 
 config :lanternhall,
   ecto_repos: [Lanternhall.Repo],
   generators: [timestamp_type: :utc_datetime]
 
-# The composition root (SPEC-platform.md section 3.2): every feature implementation, in
-# build order. The only place that names feature modules; platform reads this list.
-# Test adds synthetic fixture features from test/support/fixtures/features/ so every
-# registry path is tested before real features exist. Config scripts cannot read values
-# set earlier, so test.exs could only repeat this list; the branch here keeps one list.
 config :lanternhall,
        :features,
        [Lanternhall.Platform.PlatformFeature] ++
@@ -32,10 +24,8 @@ config :lanternhall, Lanternhall.Repo,
   journal_mode: :wal,
   busy_timeout: 2000
 
-# Configure the endpoint
 config :lanternhall, LanternhallWeb.Endpoint,
   url: [host: "localhost"],
-  # Loopback only, in every environment (SPEC-platform.md section 3.3).
   http: [ip: {127, 0, 0, 1}],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
@@ -50,12 +40,9 @@ config :lanternhall, LanternhallWeb.Endpoint,
 # and CSRF token.
 config :lanternhall, :session_cookie, "_lanternhall_#{config_env()}"
 
-# Configure LiveView
 config :phoenix_live_view,
-  # the attribute set on all root tags. Used for Phoenix.LiveView.ColocatedCSS.
   root_tag_attribute: "phx-r"
 
-# Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
   lanternhall: [
@@ -65,7 +52,6 @@ config :esbuild,
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
-# Configure tailwind (the version is required)
 config :tailwind,
   version: "4.3.3",
   # The package's check runs the binary (`--help`) when the app starts, to read its
@@ -80,11 +66,6 @@ config :tailwind,
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
-# SHA-256 of the Tailwind binary above for each platform in mise.lock, copied from the
-# release's own list:
-# https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/sha256sums.txt
-# `mix lanternhall.tailwind.install` refuses any other binary. Change these together with
-# the version.
 config :lanternhall, :tailwind_sha256, %{
   "linux-arm64" => "55fd0b241214eff3de1e8ee4f22796662f2d2e7a49bcfca7477cfd0bac398195",
   "linux-x64" => "dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a",
@@ -92,12 +73,10 @@ config :lanternhall, :tailwind_sha256, %{
   "macos-x64" => "7922e0953f2110c05976e3bf58f14e643d90427575e766b7d433f5f80cbee7e1"
 }
 
-# Configure Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-# Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom

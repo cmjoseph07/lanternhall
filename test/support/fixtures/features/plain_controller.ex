@@ -1,9 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.PlainController do
-  @moduledoc """
-  Plain (non-LiveView) GET and POST routes shared by the fixture features; the route's
-  feature gate decides whether they are reached. Replies with the feature id taken from
-  the path.
-  """
+  @moduledoc false
   use LanternhallWeb, :controller
 
   def show(conn, _params), do: text(conn, "fixture_#{feature(conn)} plain route")

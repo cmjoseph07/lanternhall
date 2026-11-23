@@ -1,12 +1,8 @@
 defmodule LanternhallWeb.Brand.IconsTest do
-  # The favicon and PWA icons are generated from logo-mark.svg by
-  # `pnpm --dir assets run icons` and committed (SPEC-platform.md section 3.8).
   use ExUnit.Case, async: true
 
   @images "priv/static/images"
 
-  # The touch icon and the maskable icon fill their square: iOS and the platform
-  # masks would show any transparent pixel as black, so they carry no alpha channel.
   @pngs [
     {"favicon-32.png", 32, :rgba},
     {"icon-192.png", 192, :rgba},

@@ -1,7 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.UnknownDependency do
-  @moduledoc """
-  Broken registry fixture: depends on an id no feature has.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

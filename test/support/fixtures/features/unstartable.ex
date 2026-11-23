@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Unstartable do
-  @moduledoc """
-  Synthetic `:core` feature whose one child raises as it starts, as a child does when
-  what it needs at boot is missing. Not in the test registry; tests pass it in directly.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

@@ -1,7 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.SelfDependency do
-  @moduledoc """
-  Broken registry fixture: depends on itself, the shortest dependency cycle there is.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

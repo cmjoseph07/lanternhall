@@ -1,28 +1,16 @@
-/* See the Tailwind configuration guide for advanced usage
-   https://tailwindcss.com/docs/configuration */
-
 @import "tailwindcss" source(none);
 @import "phoenix-colocated/lanternhall/colocated.css";
 @source "../css";
 @source "../js";
 @source "../../lib/lanternhall_web";
-/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
 @source "../../_build/dev/phoenix-colocated/lanternhall/*/";
 
-/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
-   The heroicons installation itself is managed by your mix.exs */
 @plugin "../vendor/heroicons";
 
-/* daisyUI Tailwind Plugin. */
 @plugin "daisyui/packages/bundle/daisyui" {
   themes: false;
 }
 
-/* Lanternhall's two themes, sampled from logo.svg: violet primary, amber accent,
-   ink (#121222) as the dark base. Dark is the default; root.html.heex sets
-   data-theme before first paint. Every text pair meets WCAG 2.2 AA (4.5:1),
-   checked by test/e2e/platform/theme_test.exs, including muted text at 70%
-   opacity and primary as text on every base. */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "lanternhall-dark";
   default: true;
@@ -91,7 +79,6 @@
   --noise: 0;
 }
 
-/* System font stacks only: no font file is ever downloaded. */
 @theme {
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -99,7 +86,6 @@
   --default-mono-font-family: var(--font-mono);
 }
 
-/* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
 @custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);

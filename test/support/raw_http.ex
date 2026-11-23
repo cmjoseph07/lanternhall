@@ -1,9 +1,6 @@
 defmodule LanternhallWeb.RawHTTP do
   @moduledoc """
   Sends one hand-written HTTP/1.x request to the running test server and reads the reply.
-
-  HTTP clients always send a correct `Host` header; the Host, Origin and WebSocket
-  upgrade tests need to send a wrong one, or none at all, exactly as an attacker would.
   """
 
   @timeout 5_000

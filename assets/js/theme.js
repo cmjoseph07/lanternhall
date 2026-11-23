@@ -1,5 +1,3 @@
-// Not part of the app.js bundle: the root layout inlines this file in <head>, so it
-// runs before first paint (LanternhallWeb.Layouts.theme_script/1).
 ;(() => {
   const root = document.documentElement
   const systemDark = matchMedia("(prefers-color-scheme: dark)")
@@ -25,9 +23,7 @@
   const save = (choice) => {
     try {
       localStorage.setItem("phx:theme", choice)
-    } catch {
-      // Blocked or full storage: the choice is not kept.
-    }
+    } catch {}
   }
 
   apply(load())

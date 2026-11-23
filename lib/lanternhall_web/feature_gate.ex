@@ -10,16 +10,11 @@ defmodule LanternhallWeb.FeatureGate do
         on_mount {LanternhallWeb.FeatureGate, :calendar}
       end
 
-  The gate sits on the LiveView, not on a `live_session` in the router: every LiveView
-  shares one `live_session`, so that a navigate between two features keeps the document.
-
   While the feature is disabled, mount raises `LanternhallWeb.DisabledFeatureError`, which
   answers 404 exactly like a URL with no route. On the HTTP render the endpoint renders
   the 404 page. On a connected mount (a navigate into the feature, or an open window
   reconnecting after a restart that disabled it), LiveView replies "reload" for any 4xx
   error, and the page load that follows gets the same 404.
-
-  Plain routes of a feature use the matching plug, `LanternhallWeb.Plugs.FeatureGate`.
   """
 
   alias Lanternhall.Platform.Features

@@ -1,11 +1,5 @@
 import Config
 
-# Runs at boot in every environment, and in a release: after compilation, before any
-# app starts. Compile-time settings set here would not take effect.
-
-# Install config (SPEC-platform.md section 3.1), validated here so a bad value stops
-# boot before any app starts. Dev and test default to the synthetic personal example,
-# so they never read a real install's config.
 install_env =
   if config_env() in [:dev, :test] and System.get_env("LANTERNHALL_CONFIG", "") == "" do
     Map.put(
@@ -19,24 +13,18 @@ install_env =
 
 install = Lanternhall.Platform.Config.load!(install_env, Lanternhall.Platform.Features.all())
 
-# Handed over in the app env: Lanternhall.Application moves it out at start, into
-# Lanternhall.Platform.Config, the only place the app reads it from.
 config :lanternhall, :install, install
 
-# A release serves HTTP only when asked to: `PHX_SERVER=true bin/lanternhall start`.
 if System.get_env("PHX_SERVER") do
   config :lanternhall, LanternhallWeb.Endpoint, server: true
 end
 
 if config_env() == :dev do
-  # Reload browser tabs when matching files change.
   config :lanternhall, LanternhallWeb.Endpoint,
     live_reload: [
       web_console_logger: true,
       patterns: [
-        # Static assets, except user uploads
         ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$"E,
-        # Router, Controllers, LiveViews and LiveComponents
         ~r"lib/lanternhall_web/router\.ex$"E,
         ~r"lib/lanternhall_web/(controllers|live|components)/.*\.(ex|heex)$"E
       ]
@@ -55,8 +43,6 @@ if config_env() == :prod do
     database: database_path,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
 
-  # Signs and encrypts cookies. Dev and test use the fixed values in their config
-  # files; prod reads its own from the environment, so it is never committed.
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
       raise """
@@ -64,7 +50,6 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  # Dev and test keep fixed ports (4000, 4002); prod serves on the install's port.
   port = install.port
 
   config :lanternhall, LanternhallWeb.Endpoint,

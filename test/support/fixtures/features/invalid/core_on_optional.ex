@@ -1,7 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.CoreOnOptional do
-  @moduledoc """
-  Broken registry fixture: a `:core` feature that depends on an optional one.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

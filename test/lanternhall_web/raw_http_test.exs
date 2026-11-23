@@ -1,16 +1,10 @@
 defmodule LanternhallWeb.RawHTTPTest do
-  # RawHTTP reads replies by hand, so its reader is checked against exact bytes on the
-  # wire, served once by a socket in the test. The running test server's replies are
-  # covered by every test that uses RawHTTP.
   use ExUnit.Case, async: true
 
   alias LanternhallWeb.RawHTTP
 
   @timeout 5_000
 
-  # Serves `reply` to one request on a free loopback port and returns the port. The
-  # connection then stays open until the client closes it, unless `:close` is asked for,
-  # so a reader that waits for the end of the connection would time out.
   defp serve(reply, then \\ :wait) do
     {:ok, listener} =
       :gen_tcp.listen(0, [:binary, active: false, ip: {127, 0, 0, 1}, reuseaddr: true])

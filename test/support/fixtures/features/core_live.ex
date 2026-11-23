@@ -1,12 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.CoreLive do
-  @moduledoc """
-  LiveView route of the `:fixture_core` feature, which the test install enables. Links to
-  the disabled `:fixture_personal` feature's page to prove live navigation into it.
-
-  With `?flashes` it shows an info and an error flash, so browser tests can measure how
-  flashes render. With `?exit` it exits instead of rendering, as a page does when a call
-  to another process times out.
-  """
+  @moduledoc false
   use LanternhallWeb, :live_view
 
   on_mount {LanternhallWeb.FeatureGate, :fixture_core}

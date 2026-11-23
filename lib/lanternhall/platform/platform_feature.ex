@@ -1,8 +1,5 @@
 defmodule Lanternhall.Platform.PlatformFeature do
-  @moduledoc """
-  Platform's own feature: always enabled, depends on nothing. Its install config keys are
-  the fixed ones `Lanternhall.Platform.Config` checks itself.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

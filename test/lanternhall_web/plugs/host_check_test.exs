@@ -1,7 +1,4 @@
 defmodule LanternhallWeb.Plugs.HostCheckTest do
-  # Real requests to the running test server (http://localhost:4002), so Bandit parses
-  # the Host header and Phoenix dispatches sockets exactly as for the browser. One test
-  # dispatches through the endpoint in the test process instead, to see the conn.
   use ExUnit.Case, async: true
 
   # Bandit logs every request it rejects itself (no Host on HTTP/1.1).
@@ -57,7 +54,6 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
       assert response.body == ""
     end
 
-    # Every kind of route sits behind the check, not only the pages.
     for {path, kind} <- [
           {"/healthz", "the health check"},
           {"/robots.txt", "a static file"},
@@ -74,10 +70,6 @@ defmodule LanternhallWeb.Plugs.HostCheckTest do
       end
     end
 
-    # The 400 alone does not prove this: without the halt the client gets the same
-    # reply, and the endpoint's plugs then run on the rejected request and raise
-    # `Plug.Conn.AlreadySentError` in the server. Dispatched in the test process, the
-    # same endpoint hands back the conn, or the error.
     test "with a bad Host stops at the check" do
       conn =
         Phoenix.ConnTest.dispatch(

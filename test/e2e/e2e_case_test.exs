@@ -1,6 +1,4 @@
 defmodule LanternhallWeb.E2ECaseTest do
-  # Positive control for the harness: a recorder that never fires would let every
-  # `assert_clean_browser/1` pass.
   use LanternhallWeb.E2ECase
 
   alias PhoenixTest.Playwright

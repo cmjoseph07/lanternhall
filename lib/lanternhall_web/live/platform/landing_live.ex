@@ -1,7 +1,4 @@
 defmodule LanternhallWeb.Platform.LandingLive do
-  @moduledoc """
-  Landing page served at `/` until the `home` module takes over.
-  """
   use LanternhallWeb, :live_view
 
   alias Lanternhall.Platform.Config

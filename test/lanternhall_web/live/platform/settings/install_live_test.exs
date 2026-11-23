@@ -1,5 +1,4 @@
 defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
-  # Not async: tests swap the install config and the start time stored for the whole node.
   use LanternhallWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -49,7 +48,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
     end
   end
 
-  # What a prod install shows: the server listens on the port its config names.
   describe "the page on a server that uses the configured port" do
     setup do
       config = Config.get()
@@ -95,7 +93,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
     end
   end
 
-  # Stores `config` the way boot does: through the app env, into `Config.get/0`.
   defp store(config) do
     Application.put_env(:lanternhall, :install, config)
     Config.take_from_app_env()

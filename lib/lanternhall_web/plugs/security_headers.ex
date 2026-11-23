@@ -1,20 +1,5 @@
 defmodule LanternhallWeb.Plugs.SecurityHeaders do
-  @moduledoc """
-  Sets the security and cache headers on every response (SPEC-platform.md sections 3.3 and 3.8).
-
-  It runs first in the endpoint, so HTML, static files and `/healthz` all carry:
-
-    * a strict `Content-Security-Policy` whose only inline allowance is a per-request
-      nonce, kept in `conn.assigns.csp_nonce` for the inline theme script in the root layout;
-    * `X-Content-Type-Options`, `Referrer-Policy`, `Cross-Origin-Resource-Policy` and
-      `Permissions-Policy`;
-    * `Cache-Control: no-store`, which `Plug.Static` replaces for files it serves.
-
-  The endpoint passes `dev_tools: true` in dev only, where the live-reload iframe,
-  the error pages and LiveDashboard need inline code that cannot carry the nonce:
-  pages also allow a same-origin frame, and those dev tool responses keep the
-  `frame-ancestors` directive alone, so another origin still cannot frame them.
-  """
+  @moduledoc false
   @behaviour Plug
 
   import Plug.Conn
@@ -42,8 +27,6 @@ defmodule LanternhallWeb.Plugs.SecurityHeaders do
 
   defp put_csp(conn, nonce, false), do: put_csp(conn, policy(nonce))
 
-  # The live-reload frame and LiveDashboard exist in dev only. Every page embeds the
-  # frame, so it allows its own origin; nothing embeds the dashboard.
   defp put_csp(%{path_info: ["phoenix", "live_reload", "frame" | _]} = conn, _nonce, true),
     do: put_csp(conn, "frame-ancestors 'self'")
 

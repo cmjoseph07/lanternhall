@@ -1,13 +1,5 @@
 defmodule Lanternhall.Platform.Features do
   @moduledoc """
-  The feature registry (SPEC-platform.md section 3.2): the `Lanternhall.Platform.Feature`
-  implementations listed in `config :lanternhall, :features`, checked for consistency,
-  and resolved against an install's kind and modules into the enabled set.
-
-  The enabled set is every `:core` feature plus those the install config lists. It is
-  stored in `Lanternhall.Platform.Config` at boot, and everything a feature contributes is
-  read from that set only, so a disabled feature contributes nothing.
-
   Problems are data, like the config's own: `{"the feature registry", reason}` for a broken
   registry (a code problem, so it is named as the registry and not as an install key) and
   `{:modules, reason}` for an install that enables the wrong modules.
@@ -17,7 +9,6 @@ defmodule Lanternhall.Platform.Features do
 
   require Logger
 
-  # How a registry problem is named in an error line; an atom would print as an install key.
   @registry "the feature registry"
 
   @doc "Every feature implementation, in the order `config/config.exs` lists them."
@@ -151,7 +142,6 @@ defmodule Lanternhall.Platform.Features do
         do: "lists #{inspect(module)}, which does not implement #{inspect(Feature)}"
   end
 
-  # What each callback must return, as worded in the error.
   @shapes [
     id: "an atom",
     kind: ":core, :personal or :work",
@@ -239,9 +229,8 @@ defmodule Lanternhall.Platform.Features do
     end
   end
 
-  # Reports the first cycle found, walking features in registry order. `:digraph` is
-  # Erlang's built-in graph (https://www.erlang.org/doc/apps/stdlib/digraph.html); it
-  # lives in ETS tables, so it is deleted once read.
+  # `:digraph` is Erlang's built-in graph (https://www.erlang.org/doc/apps/stdlib/digraph.html);
+  # it lives in ETS tables, so it is deleted once read.
   defp cycle(features) do
     graph = :digraph.new()
 
@@ -262,7 +251,6 @@ defmodule Lanternhall.Platform.Features do
     end
   end
 
-  # Each key has one owner: platform, or the first feature that claims it.
   defp key_clashes(features) do
     claims =
       Enum.map(Config.platform_keys(), &{&1, "platform"}) ++

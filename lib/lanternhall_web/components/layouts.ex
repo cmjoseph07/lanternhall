@@ -1,11 +1,6 @@
 defmodule LanternhallWeb.Layouts do
-  @moduledoc """
-  The root document, the layout every page renders in, and the pieces of that
-  layout: flashes, the theme toggle and the logo.
-  """
   use LanternhallWeb, :html
 
-  # `root/1` comes from layouts/root.html.heex: the document around every page.
   embed_templates "layouts/*"
 
   @doc """
@@ -44,16 +39,6 @@ defmodule LanternhallWeb.Layouts do
     """
   end
 
-  @doc """
-  Shows the flash group with standard titles and content.
-
-  The group is a polite live region: a screen reader reads out each flash that appears
-  in it, once.
-
-  ## Examples
-
-      <.flash_group flash={@flash} />
-  """
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
 
@@ -101,20 +86,11 @@ defmodule LanternhallWeb.Layouts do
   end
 
   # Inlined rather than bundled into app.js, which is deferred and would run after
-  # first paint. Read at compile time from assets/js, where Biome checks it with the
-  # rest of the JS.
+  # first paint.
   @theme_script_path Path.expand("../../../assets/js/theme.js", __DIR__)
   @external_resource @theme_script_path
   @theme_script File.read!(@theme_script_path)
 
-  @doc """
-  Renders the inline script that applies the theme, for the root layout's `<head>`.
-
-  The choice (system, light or dark; dark when none is stored) lives in
-  `localStorage` and becomes `data-theme` (a daisyUI theme from app.css) plus
-  `data-theme-choice` (what the top bar toggle shows) on `<html>`. The CSP nonce
-  allows exactly this script.
-  """
   attr :nonce, :string, required: true, doc: "the request's CSP nonce"
 
   def theme_script(assigns) do
@@ -127,18 +103,6 @@ defmodule LanternhallWeb.Layouts do
     """
   end
 
-  @doc """
-  The top bar's theme toggle: system, light or dark.
-
-  A click dispatches `phx:set-theme`, which the inline theme script
-  (`theme_script/1`) handles: it stores the choice and sets `data-theme` and
-  `data-theme-choice` on `<html>`. The highlight follows `data-theme-choice` in
-  CSS, so it is right from the first frame; the `.ThemeToggle` hook mirrors the
-  choice into `aria-pressed` for screen readers, and `phx-update="ignore"` keeps
-  LiveView from patching those attributes away. The focus ring is drawn inside the
-  button, so it never runs into the thumb under a neighbouring button; on the selected
-  button it takes the thumb's content color.
-  """
   def theme_toggle(assigns) do
     ~H"""
     <div
@@ -201,15 +165,11 @@ defmodule LanternhallWeb.Layouts do
   end
 
   # The logo is inlined rather than loaded with <img>, so its `currentColor`
-  # wordmark follows the theme's text color. Read at compile time from the one
-  # source file, without its comments.
+  # wordmark follows the theme's text color.
   @logo_path Path.expand("../../../priv/static/images/logo.svg", __DIR__)
   @external_resource @logo_path
   @logo_svg @logo_path |> File.read!() |> String.replace(~r/\s*<!--.*?-->/s, "")
 
-  @doc """
-  Renders the Lanternhall logo inline, named "Lanternhall" for screen readers.
-  """
   attr :id, :string, required: true
   attr :class, :any, default: nil
 

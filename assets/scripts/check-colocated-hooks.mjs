@@ -1,7 +1,3 @@
-// Checks the colocated hooks with Biome: lint, format and import order.
-// Run with `pnpm --dir assets run hooks ../_build/<env>` after a compile; `mix precommit`
-// does both.
-//
 // Phoenix extracts each hook from its HEEx template as written, so the extracted file
 // keeps the template's indentation and the blank line after the <script> tag, which no
 // formatter accepts. This writes a copy of each hook without them and hands the copies
@@ -17,10 +13,8 @@ if (!process.argv[2]) {
 
 const build = resolve(process.argv[2])
 const extracted = join(build, "phoenix-colocated", "lanternhall")
-// Matched by `files.includes` in biome.json.
 const copies = join(build, "lanternhall-hooks-dedented")
 
-// Drops the blank lines around the code and the indentation every line shares.
 function dedent(source) {
   const lines = source
     .replace(/^(\s*\n)+/, "")
@@ -51,7 +45,6 @@ for (const { name: module } of modules) {
   }
 }
 
-// A wrong path or a build that was never compiled must not pass as "nothing to check".
 if (count === 0) {
   throw new Error(`no colocated hook found in ${extracted}`)
 }

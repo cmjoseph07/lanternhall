@@ -3,9 +3,6 @@ defmodule Lanternhall.Platform.Feature do
   The contract every Lanternhall feature implements once, in `lib/lanternhall/<feature>/feature.ex`
   (SPEC-platform.md section 3.2). A feature is one module from SPEC.md section 3; the
   word "module" already means an Elixir `defmodule`.
-
-  Platform reads these callbacks through `Lanternhall.Platform.Features`; it never names a
-  feature module directly. The list of implementations lives only in `config/config.exs`.
   """
 
   alias Lanternhall.Platform.Config

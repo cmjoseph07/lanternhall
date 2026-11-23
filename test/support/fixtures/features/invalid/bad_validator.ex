@@ -1,9 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.BadValidator do
-  @moduledoc """
-  Broken registry fixture: its validators return shapes the behaviour does not name. Every
-  callback's own shape is right, so only running a validator shows the problem. `:core`,
-  so its keys are checked on any install.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

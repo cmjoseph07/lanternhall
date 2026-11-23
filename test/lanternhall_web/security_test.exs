@@ -1,8 +1,6 @@
 defmodule LanternhallWeb.SecurityTest do
-  # Origin and CSRF checks (SPEC-platform.md section 3.3).
   use ExUnit.Case, async: true
 
-  # Phoenix logs every refused Origin; keep the expected noise out of the test output.
   @moduletag :capture_log
 
   alias LanternhallWeb.RawHTTP
@@ -38,8 +36,6 @@ defmodule LanternhallWeb.SecurityTest do
       end
     end
 
-    # WebSocket is the only transport: on loopback the long-poll fallback is never
-    # needed, and a transport that does not exist cannot be reached from another Origin.
     test "over long-poll is not offered" do
       response =
         RawHTTP.request("GET /live/longpoll?vsn=2.0.0 HTTP/1.1", [
@@ -68,7 +64,6 @@ defmodule LanternhallWeb.SecurityTest do
       assert cookie =~ ~r/^_lanternhall_test=/
     end
 
-    # The session holds the CSRF token; no script on a page needs to read it, so none can.
     test "is HttpOnly", %{cookie: cookie} do
       assert cookie =~ ~r/; HttpOnly(;|$)/
     end
@@ -81,9 +76,6 @@ defmodule LanternhallWeb.SecurityTest do
   end
 
   describe "a form POST through the :browser pipeline" do
-    # Real requests to the fixture route POST /fixtures/core/plain, which pipes through
-    # :browser like every browser route, carrying what a browser holds after loading a
-    # page: the session cookie and the page's CSRF token.
     setup do
       page =
         RawHTTP.request("GET /fixtures/core HTTP/1.1", [
@@ -132,9 +124,6 @@ defmodule LanternhallWeb.SecurityTest do
       assert post_plain([], URI.encode_query(%{"_csrf_token" => token})).status == 403
     end
 
-    # No page uploads a file, so the endpoint parses no multipart body. Any site can send
-    # one to this port without a preflight, and it would be parsed ahead of this check
-    # and of the router; unparsed, its token is never seen.
     test "as a multipart body is refused with 403, its token unread", ctx do
       body =
         "--b\r\ncontent-disposition: form-data; name=\"_csrf_token\"\r\n\r\n" <>

@@ -1,6 +1,3 @@
-# Git hooks (SPEC.md section 8). Install once per clone: `lefthook install`.
-# Dialyzer and E2E run in CI only.
-
 pre-commit:
   jobs:
     - name: format

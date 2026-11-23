@@ -1,43 +1,11 @@
 defmodule LanternhallWeb.CoreComponents do
-  @moduledoc """
-  Provides core UI components.
-
-  Holds only the components the app uses today: flash notices, icons and
-  the show/hide JS commands. Tasks that need more (inputs, buttons, tables)
-  add them here, starting from the `phx.new` versions.
-
-  The foundation for styling is Tailwind CSS, a utility-first CSS framework,
-  augmented with daisyUI, a Tailwind CSS plugin that provides UI components
-  and themes. Here are useful references:
-
-    * [daisyUI](https://daisyui.com/docs/intro/) - a good place to get
-      started and see the available components.
-
-    * [Tailwind CSS](https://tailwindcss.com) - the foundational framework
-      we build on. You will use it for layout, sizing, flexbox, grid, and
-      spacing.
-
-    * [Heroicons](https://heroicons.com) - see `icon/1` for usage.
-
-    * [Phoenix.Component](https://phoenix-live-view.hexdocs.pm/Phoenix.Component.html) -
-      the component system used by Phoenix. Some components, such as `<.link>`
-      and `<.form>`, are defined there.
-
-  """
+  @moduledoc false
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
 
   @doc """
   Renders flash notices.
-
-  A flash is not a live region itself: `Layouts.flash_group/1`, where flashes render,
-  is the one that announces it. A second one inside it would make a screen reader read
-  the flash out twice.
-
-  The id, the click and the extra attributes sit on a plain container around the alert.
-  `show/2` writes `display: block` on the element it shows. On the alert itself that would
-  replace the alert's grid, the layout that keeps the icon, the text and Close in one row.
 
   ## Examples
 
@@ -97,16 +65,6 @@ defmodule LanternhallWeb.CoreComponents do
   @doc """
   Renders a [Heroicon](https://heroicons.com).
 
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
-
-  Icons are extracted from the `deps/heroicons` directory and bundled within
-  your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
-
   ## Examples
 
       <.icon name="hero-x-mark" />
@@ -120,8 +78,6 @@ defmodule LanternhallWeb.CoreComponents do
     <span class={[@name, @class]} />
     """
   end
-
-  ## JS Commands
 
   def show(js \\ %JS{}, selector) do
     JS.show(js,

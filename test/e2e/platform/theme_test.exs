@@ -1,7 +1,4 @@
 defmodule LanternhallWeb.E2E.Platform.ThemeTest do
-  # Dark and light themes from the logo palette, the top bar toggle, no flash of
-  # the wrong theme, WCAG 2.2 AA contrast and system fonts (SPEC-platform.md section 3.6).
-  #
   # The browser context emulates `prefers-color-scheme: light` (Playwright's default),
   # so a dark first visit proves the default is dark rather than the system's choice.
   use LanternhallWeb.E2ECase
@@ -57,7 +54,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
-  # A value no version of the toggle writes, such as one left by an older build.
   test "an unknown stored theme renders dark from the first frame", %{conn: conn} do
     conn
     |> visit(~p"/")
@@ -161,7 +157,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
-  # `localStorage.clear()` reaches the app's other tabs as a `storage` event with no key.
   test "clearing the site's storage in one tab returns the other open tabs to the default",
        %{conn: conn} do
     other_tab = open_tab(conn)
@@ -184,8 +179,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
-  # On rejoining, LiveView patches the page to the server's render, which marks no
-  # button as pressed.
   test "the pressed button survives losing and regaining the connection", %{conn: conn} do
     conn
     |> visit(~p"/")
@@ -272,9 +265,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     |> assert_clean_browser()
   end
 
-  # WCAG 2.2 AA 1.4.3: text needs 4.5:1 against what it sits on. Each pair is
-  # {text color, opacity, background}; opacity 0.7 is the muted text the pages use
-  # (`text-base-content/70`), and primary is the color of links and active states.
   @text_pairs (for base <- ~w(base-100 base-200 base-300),
                    {text, opacity} <- [{"base-content", 1}, {"base-content", 0.7}, {"primary", 1}] do
                  [text, opacity, base]
@@ -284,9 +274,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
                   do: ["#{color}-content", 1, color]
                 )
 
-  # Paints each pair onto a 1x1 canvas the way the browser composites it, and reads
-  # back the sRGB pixels of the background and of the text over it. A color the
-  # theme leaves undefined, or the canvas cannot parse, throws instead of passing.
   @paint_pairs """
   ((pairs, themes) => {
     const canvas = Object.assign(document.createElement("canvas"), { width: 1, height: 1 });
@@ -346,10 +333,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
   # (1.4.3; 3:1 for large text), every icon to 3:1 (1.4.11; icons are masks filled with
   # `background-color`), and every focusable element must show a focus ring of 3:1
   # against what lies around it (2.4.7, 1.4.11). Logos are exempt (1.4.3).
-  #
-  # The color behind a point is what the browser stacks there: each element under it,
-  # from the root up, painted at its effective opacity onto a 1x1 canvas, so a sibling
-  # drawn behind an element (the toggle's thumb) counts like an ancestor's background.
   @measure_page """
   (async () => {
     const settle = () => Promise.all(document.getAnimations().map((a) => a.finished));
@@ -370,7 +353,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
       for (let n = node; n; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
       return o;
     };
-    // What lies under (x, y) below `el` (and `el` itself when `withSelf`), bottom first.
     const backdrop = (x, y, el, withSelf) => {
       const hits = document.elementsFromPoint(x, y);
       let below = hits;
@@ -534,7 +516,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     Playwright.evaluate(conn, "window.__schemeChanged.then(() => true)", &assert(&1))
   end
 
-  # A second page in the test's browser context, as a second tab of the same browser.
   defp open_tab(conn) do
     {:ok, page} =
       BrowserContext.new_page(conn.context_id, timeout: Playwright.Config.global(:timeout))
@@ -542,7 +523,6 @@ defmodule LanternhallWeb.E2E.Platform.ThemeTest do
     %{conn | page_id: page.guid, frame_id: page.main_frame.guid}
   end
 
-  # The root took exactly one theme, before the first frame was painted.
   defp assert_first_frame(conn, theme) do
     conn
     |> Playwright.evaluate("window.__themeLog", fn log -> assert log == [theme] end)

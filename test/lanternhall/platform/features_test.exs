@@ -28,7 +28,6 @@ defmodule Lanternhall.Platform.FeaturesTest do
     }
   end
 
-  # Stands in for Lanternhall.Supervisor, which holds the feature supervisors in the app.
   defp start_tree(config) do
     start_supervised!(%{
       id: :tree,
@@ -121,7 +120,6 @@ defmodule Lanternhall.Platform.FeaturesTest do
                 ]}
     end
 
-    # Core is listed twice, which gives its id away twice more.
     test "refuses an id given three times in one line, naming every module" do
       assert Features.validate([Core, Invalid.DuplicateCore, Core]) ==
                {:error,
@@ -160,8 +158,6 @@ defmodule Lanternhall.Platform.FeaturesTest do
                 ]}
     end
 
-    # The cycle sits after features with no cycle, as in a real registry, which always
-    # starts with PlatformFeature.
     test "refuses a dependency cycle, naming the path" do
       assert Features.validate([
                PlatformFeature,
@@ -271,7 +267,6 @@ defmodule Lanternhall.Platform.FeaturesTest do
 
     test "gives no supervisor to a feature whose children/1 returns none" do
       registry = [Childless, Core]
-      # A sound feature in every other way, so only its empty children list is at play.
       assert Features.validate(registry) == :ok
 
       assert [%{id: {:feature, :fixture_core}}] =
@@ -303,7 +298,6 @@ defmodule Lanternhall.Platform.FeaturesTest do
 
     test "leaves a feature whose child fails to start stopped, logs it and starts the others" do
       registry = [Unstartable, Core]
-      # A sound feature in every other way, so only its failing child is at play.
       assert Features.validate(registry) == :ok
 
       {sup, log} =

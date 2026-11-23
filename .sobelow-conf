@@ -1,9 +1,7 @@
 [
-  # Fail on any finding, at any confidence.
   exit: "low",
   # No update check: the scan makes no network call.
   private: true,
-  # Honor `# sobelow_skip` comments; each one states its reason next to the code.
   skip: true,
   ignore: [
     # False positive: the app serves plain HTTP on 127.0.0.1 only and is opened at

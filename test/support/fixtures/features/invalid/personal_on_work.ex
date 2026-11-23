@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.PersonalOnWork do
-  @moduledoc """
-  Broken registry fixture: a `:personal` feature depending on the `:work` feature
-  `:fixture_work`.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

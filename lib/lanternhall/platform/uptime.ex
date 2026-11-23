@@ -1,11 +1,5 @@
 defmodule Lanternhall.Platform.Uptime do
-  @moduledoc """
-  How long the app has been running. `Lanternhall.Application` marks the start once at
-  boot, and every reader takes the time since then from here.
-
-  The start is a reading of the monotonic clock, so a change to the system time never
-  moves the uptime.
-  """
+  @moduledoc false
 
   @persistent_term_key {__MODULE__, :started_at}
 

@@ -1,7 +1,4 @@
 defmodule LanternhallWeb.E2E.Platform.PWATest do
-  # Lanternhall installs as an app from its manifest alone, without a service
-  # worker (SPEC-platform.md sections 3.8 and 11).
-  #
   # Headless Chromium has no install UI: `beforeinstallprompt` never fires and
   # `Page.getInstallabilityErrors` answers `[]` even for a broken manifest. So this
   # test checks what install depends on (Chromium's own parse of the manifest, every
@@ -17,7 +14,6 @@ defmodule LanternhallWeb.E2E.Platform.PWATest do
       conn
       |> visit(~p"/")
       |> assert_has("[data-phx-main].phx-connected")
-      # The icons are for the browser, not the page: Landing loads no image.
       |> Playwright.evaluate(
         ~s|performance.getEntriesByType("resource").filter((e) => e.initiatorType === "img").map((e) => e.name)|,
         fn images -> assert images == [] end

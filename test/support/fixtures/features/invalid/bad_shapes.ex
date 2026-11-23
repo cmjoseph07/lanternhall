@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.BadShapes do
-  @moduledoc """
-  Broken registry fixture: implements the behaviour, but every callback returns the wrong
-  shape.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

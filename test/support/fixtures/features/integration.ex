@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Integration do
-  @moduledoc """
-  Synthetic `:work` feature standing in for an external integration; `:fixture_work`
-  depends on it.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

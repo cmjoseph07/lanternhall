@@ -1,7 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.KeyClash do
-  @moduledoc """
-  Broken registry fixture: claims a platform key and a key `:fixture_personal` owns.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

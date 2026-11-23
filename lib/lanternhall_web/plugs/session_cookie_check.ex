@@ -1,8 +1,5 @@
 defmodule LanternhallWeb.Plugs.SessionCookieCheck do
   @moduledoc """
-  Rejects every request that carries the session cookie more than once with `400` and
-  a plain body.
-
   Browsers send a host's cookies to every port on it, and let a page from any of those
   ports set them. A page on another localhost port can therefore add a second cookie of
   the session's name, for example with `Path=/live`. The browser sends the cookie with
@@ -10,16 +7,8 @@ defmodule LanternhallWeb.Plugs.SessionCookieCheck do
   without a session, LiveView would refuse the join, and the page would reload without
   end.
 
-  The app sets one session cookie, so a second one is never its own, and the request
-  ends here. The stray cookie stays until the browser's cookies for localhost are
-  cleared, and a page whose socket is refused shows the "cannot connect" notice until
-  then.
-
   The `__Host-` name prefix would have the browser refuse the stray cookie itself, but
   it needs a `Secure` cookie, and Safari takes none from `http://localhost`.
-
-  `LanternhallWeb.Endpoint.call/2` runs this before Phoenix dispatches sockets, so
-  LiveView WebSocket upgrades are checked too.
   """
   @behaviour Plug
 

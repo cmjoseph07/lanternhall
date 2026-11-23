@@ -9,7 +9,6 @@ defmodule LanternhallWeb.FeatureGateTest do
     RawHTTP.request("GET #{path} HTTP/1.1", [{"host", "localhost:4002"}, {"accept", accept}])
   end
 
-  # Header values such as the CSP nonce and request id differ per request; names must not.
   defp shape(response) do
     {response.status, response.headers["content-type"], Map.keys(response.headers), response.body}
   end
@@ -21,15 +20,12 @@ defmodule LanternhallWeb.FeatureGateTest do
   end
 
   test "a disabled feature's LiveView answers exactly like a URL with no route" do
-    # Real requests to the running test server, as the browser sends them.
     disabled = raw_get("/fixtures/personal")
 
     assert disabled.status == 404
     assert shape(disabled) == shape(raw_get("/no-such-page"))
   end
 
-  # The gate plug runs before the browser pipeline, so its format negotiation never
-  # answers 406 for a LiveView route that should not exist.
   test "a disabled feature's LiveView answers like a URL with no route for any format" do
     assert shape(raw_get("/fixtures/personal", "application/json")) ==
              shape(raw_get("/no-such-page", "application/json"))

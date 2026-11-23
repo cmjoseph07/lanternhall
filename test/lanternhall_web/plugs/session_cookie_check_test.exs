@@ -1,15 +1,10 @@
 defmodule LanternhallWeb.Plugs.SessionCookieCheckTest do
-  # Real requests to the running test server (http://localhost:4002), so Bandit passes
-  # the Cookie headers on and Phoenix dispatches sockets exactly as for the browser. One
-  # test dispatches through the endpoint in the test process instead, to see the conn
-  # and the log.
   use ExUnit.Case, async: true
 
   import ExUnit.CaptureLog
 
   alias LanternhallWeb.RawHTTP
 
-  # The check logs every request it refuses.
   @moduletag :capture_log
 
   @name "_lanternhall_test"
@@ -25,7 +20,6 @@ defmodule LanternhallWeb.Plugs.SessionCookieCheckTest do
     {"sec-websocket-version", "13"}
   ]
 
-  # The session cookie a browser holds after loading a page, as `name=value`.
   setup_all do
     page = get([])
     [set_cookie] = page.headers["set-cookie"]
@@ -52,7 +46,6 @@ defmodule LanternhallWeb.Plugs.SessionCookieCheckTest do
       assert response.body == @body
     end
 
-    # Every way the two cookies can reach Plug's cookie parser.
     for {shape, why} <- [
           {"<session>; <name>=x", "the stray cookie last"},
           {"<name>=x;<session>", "no space after the semicolon"},
@@ -75,7 +68,6 @@ defmodule LanternhallWeb.Plugs.SessionCookieCheckTest do
       assert get([{"cookie", "#{@name}=x"}, {"cookie", session}]).status == 400
     end
 
-    # Only the session's own name counts: other cookies on localhost belong to other apps.
     for {others, why} <- [
           {"other=1; other=2", "another cookie twice"},
           {"x#{@name}=1", "a name that ends with the session's"},
@@ -87,7 +79,6 @@ defmodule LanternhallWeb.Plugs.SessionCookieCheckTest do
       end
     end
 
-    # Every kind of route sits behind the check, not only the pages.
     for {path, kind} <- [
           {"/healthz", "the health check"},
           {"/robots.txt", "a static file"},
@@ -101,8 +92,6 @@ defmodule LanternhallWeb.Plugs.SessionCookieCheckTest do
       end
     end
 
-    # As for the Host check: the 400 alone does not prove the request ended at the
-    # check, so this dispatches through the same endpoint in the test process.
     test "with the session cookie twice stops at the check and is logged", %{session: session} do
       {conn, log} =
         with_log(fn ->

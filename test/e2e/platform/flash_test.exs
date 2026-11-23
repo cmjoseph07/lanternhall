@@ -1,14 +1,9 @@
 defmodule LanternhallWeb.E2E.Platform.FlashTest do
-  # Flashes stack in one column below the top bar, right-aligned with its controls, so
-  # none hides another or the top bar, at the widths the pixel check uses
-  # (SPEC-platform.md section 8). A screen reader hears each one once. Close dismisses
-  # one flash, and the two reconnect notices show only while the page is cut off.
   use LanternhallWeb.E2ECase
 
   alias Phoenix.LiveView.Debug
   alias PhoenixTest.Playwright
 
-  # Each visible part's box once animations finish, as [left, top, right, bottom].
   @boxes """
   (async () => {
     await Promise.all(document.getAnimations().map((animation) => animation.finished));
@@ -47,7 +42,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     end
   end
 
-  # For each flash: the live regions it sits in, innermost first, and its close button's name.
   @announcements """
   (() => {
     const live = "[aria-live]:not([aria-live=off]), [role=alert], [role=status], [role=log]";
@@ -80,8 +74,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     |> assert_clean_browser()
   end
 
-  # Resolves once the server's next render has taken the closed flash out of the page,
-  # with the flashes still in it. Hiding it in the browser alone never resolves this.
   @flashes_after_close """
   (closed) => new Promise((resolve) => {
     const group = document.getElementById("flash-group");
@@ -128,10 +120,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     |> assert_clean_browser()
   end
 
-  # Cuts the socket, waits until the client notice has finished appearing, then measures
-  # it beside the info flash: each alert's display and width, and how far its Close
-  # button sits from the alert's right and top edges.
-  #
   # LiveView sends `phx:show-end` when the show transition's time is up and takes the
   # transition's classes off in the next frame. The notice's spinner never stops, so
   # waiting on `document.getAnimations()` here would never end.
@@ -207,7 +195,6 @@ defmodule LanternhallWeb.E2E.Platform.FlashTest do
     |> assert_clean_browser()
   end
 
-  # Kills the LiveView process behind the page, as a crash would; the socket stays up.
   defp kill_live_view(conn) do
     Playwright.evaluate(conn, "document.querySelector('[data-phx-main]').id", fn id ->
       [%{pid: pid}] =

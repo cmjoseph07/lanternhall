@@ -4,9 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Daily, for the advisory scan alone: an advisory can be published against a version
-  # already on main, with no commit to start a run. Everything else a run reads is pinned,
-  # so the other jobs skip the scheduled run.
   schedule:
     - cron: "23 5 * * *"
 
@@ -20,21 +17,14 @@ concurrency:
   group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 
-# Actions are pinned by commit SHA (tag in the comment); each was at least 7 days old when pinned.
-# Hex is pinned for the same reason; rebar3 comes from builds.hex.pm for this Elixir version.
 # The toolchain is installed from mise.lock: with that file in the repo, mise-action runs
 # `mise install --locked`, which checks each download against the SHA-256 recorded there
 # and refuses a tool that has no entry.
 # Each job caches its own deps and _build (key starts with the job id): the jobs build
 # different envs, and a shared key would keep only the first job's _build.
-# Runner images are pinned (newest Ubuntu LTS and macOS), so an image change is a reviewed
-# commit. Cache keys carry the image ($ImageOS), so a new image never restores native code
-# (NIFs, Chromium) built on the old one.
 # The deps, _build and PLT keys also carry the hash of mise.lock, so they are rebuilt when
 # any tool's download changes. The version alone is not enough: Dialyzer refuses a PLT
 # made by another build of the same OTP version ("Old PLT file").
-# Checkout does not persist the token: no step pushes or fetches, so later steps (deps,
-# package scripts, tests) get no git credentials to read.
 
 jobs:
   advisories:
@@ -46,15 +36,11 @@ jobs:
         with:
           persist-credentials: false
 
-      # Only the scanner: this job needs no Erlang, Elixir or Node.
       - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
           version: 2026.11.7
           install_args: osv-scanner
 
-      # Checks every locked Hex and npm package against the OSV database (https://osv.dev),
-      # which carries the Erlang Ecosystem Foundation's advisories for Hex packages and
-      # GitHub's for npm. Any known advisory fails the job, whatever its severity.
       - name: Known advisories in mix.lock and pnpm-lock.yaml
         run: osv-scanner scan source --lockfile mix.lock --lockfile assets/pnpm-lock.yaml
 
@@ -74,9 +60,6 @@ jobs:
         with:
           version: 2026.11.7
 
-      # The pre-commit hook scans staged changes only, and `--no-verify` skips it. This scans
-      # every commit, so a secret added and removed again still fails. Known findings are
-      # skipped by fingerprint in .gitleaksignore.
       - name: Secret scan
         run: gitleaks git --redact --no-banner --verbose
 
@@ -186,10 +169,6 @@ jobs:
       - name: Install Chromium
         run: pnpm --dir assets exec playwright install --with-deps chromium
 
-      # The committed favicon and PWA icons must be exactly what the generator renders from
-      # logo-mark.svg (its output is byte-stable on macOS and Linux). Every image except the
-      # two hand-written sources is deleted first, so a file the generator stopped writing
-      # shows as deleted and one it started writing shows as untracked.
       - name: Icons match the generator
         run: |
           git ls-files -z -- priv/static/images ':(exclude)priv/static/images/logo-mark.svg' ':(exclude)priv/static/images/logo.svg' | xargs -0 rm
@@ -256,8 +235,6 @@ jobs:
       - name: Tests
         run: mix test --exclude e2e --warnings-as-errors
 
-      # The release refuses to build without digested assets (mix.exs releases/0). The
-      # manifest is gitignored and not built yet, so this build must stop, and for that reason.
       - name: Prod release refuses to build without digested assets
         run: |
           if output=$(mix release --overwrite 2>&1); then
@@ -285,10 +262,6 @@ jobs:
         env:
           MIX_ENV: prod
 
-      # An install checks its config with this task before anything is installed or started,
-      # in prod, where the app itself cannot boot here: no install config, DATABASE_PATH or
-      # SECRET_KEY_BASE is set. The task must still pass both example files, and refuse a
-      # bad one by naming the key.
       - name: Config check answers in prod without the app's own config
         run: |
           unset LANTERNHALL_CONFIG DATABASE_PATH SECRET_KEY_BASE

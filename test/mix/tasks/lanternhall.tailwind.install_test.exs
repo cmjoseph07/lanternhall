@@ -1,5 +1,4 @@
 defmodule Mix.Tasks.Lanternhall.Tailwind.InstallTest do
-  # Not async: Mix.shell/1 and the :tailwind and :lanternhall app env are process-wide.
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
@@ -10,8 +9,6 @@ defmodule Mix.Tasks.Lanternhall.Tailwind.InstallTest do
 
   @repo_root Path.expand("../../..", __DIR__)
 
-  # Stands in for the Tailwind binary: it writes its arguments next to itself, so a test
-  # can tell whether it ran.
   @pinned_binary """
   #!/bin/sh
   echo "$@" > "$0.ran"
@@ -19,8 +16,6 @@ defmodule Mix.Tasks.Lanternhall.Tailwind.InstallTest do
 
   @forged_binary @pinned_binary <> "# forged\n"
 
-  # The binary lives in the test's own directory and the pin is the stand-in's hash, so
-  # no test touches the real binary in _build or reaches GitHub.
   setup %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "tailwind")
     put_env(:tailwind, :path, path)
@@ -50,8 +45,6 @@ defmodule Mix.Tasks.Lanternhall.Tailwind.InstallTest do
 
   defp sha256(bytes), do: :sha256 |> :crypto.hash(bytes) |> Base.encode16(case: :lower)
 
-  # Serves `bytes` for every request on a free loopback port and returns the base URL to
-  # install from. The test process gets a message for each download.
   defp serve(bytes) do
     test = self()
 
@@ -147,8 +140,6 @@ defmodule Mix.Tasks.Lanternhall.Tailwind.InstallTest do
       assert File.read!(path <> ".ran") =~ ~r/^--input=assets\/css\/app\.css .* --watch$/
     end
 
-    # The default URL is GitHub's, so the refusal is reached through a platform with no
-    # pin, which fails before any download.
     test "reports a failed check and returns without running Tailwind", %{path: path} do
       install_binary(path, @pinned_binary)
       Application.put_env(:lanternhall, :tailwind_sha256, %{})
@@ -161,8 +152,6 @@ defmodule Mix.Tasks.Lanternhall.Tailwind.InstallTest do
     end
   end
 
-  # The task protects nothing unless every way the project runs Tailwind goes through it.
-  # These read the config files and aliases as written, not the app env set up above.
   describe "the project" do
     test "pins a SHA-256 for each platform mise.lock covers" do
       pins = config(:test)[:lanternhall][:tailwind_sha256]

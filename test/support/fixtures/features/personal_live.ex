@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.PersonalLive do
-  @moduledoc """
-  LiveView route of the `:fixture_personal` feature, which the test install disables, so
-  its gate answers 404 and this never renders.
-  """
+  @moduledoc false
   use LanternhallWeb, :live_view
 
   on_mount {LanternhallWeb.FeatureGate, :fixture_personal}

@@ -135,7 +135,6 @@ defmodule Lanternhall.Platform.ConfigTest do
       refute reason =~ "\n"
     end
 
-    # The file is Elixir, so it can fail while it runs, not only while it is parsed.
     test "a file that raises when evaluated gives one line naming the path and the error",
          %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, ~s|System.fetch_env!("LANTERNHALL_NO_SUCH_VARIABLE")\n|)
@@ -149,7 +148,6 @@ defmodule Lanternhall.Platform.ConfigTest do
                 ]}
     end
 
-    # A throw or an exit is not an exception, so a `rescue` alone lets it through.
     test "a file that throws when evaluated gives one line naming the path and the value",
          %{tmp_dir: tmp_dir} do
       path = write_config(tmp_dir, "throw(:not_today)\n")
@@ -453,7 +451,6 @@ defmodule Lanternhall.Platform.ConfigTest do
                  Lanternhall.Fixtures.Features.Invalid.DuplicateCore
                ])
 
-      # Named as the registry, so the line cannot be read as an install key called :features.
       assert Config.format_errors(errors) =~
                ~r/^lanternhall config: the feature registry gives id :fixture_core to /
     end
@@ -573,7 +570,6 @@ defmodule Lanternhall.Platform.ConfigTest do
 
   describe "take_from_app_env/0" do
     test "moves the config out of the app env, and returns the stored one when called again" do
-      # Boot already did, so get/0 is the only way to read the config.
       assert Application.fetch_env(:lanternhall, :install) == :error
 
       config = Config.get()
@@ -583,7 +579,6 @@ defmodule Lanternhall.Platform.ConfigTest do
       assert Config.take_from_app_env() == config
       assert Application.fetch_env(:lanternhall, :install) == :error
 
-      # As when the app is stopped and started again on the same node.
       assert Config.take_from_app_env() == config
       assert Config.get() == config
     end

@@ -1,7 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.DuplicateCore do
-  @moduledoc """
-  Broken registry fixture: reuses the id of `Lanternhall.Fixtures.Features.Core`.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

@@ -1,5 +1,4 @@
 defmodule LanternhallWeb.Brand.PWATest do
-  # Favicon, touch icon and web app manifest (SPEC-platform.md section 3.8).
   use LanternhallWeb.ConnCase, async: true
 
   @files [

@@ -1,17 +1,11 @@
 defmodule LanternhallWeb.RouterTest do
-  # Feature gates check their id only when they run, so a mistyped id would surface as
-  # a 500 on some later request. These walk every route so the suite catches it first.
   use LanternhallWeb.ConnCase, async: true
 
   alias Lanternhall.Platform.Features
   alias LanternhallWeb.{FeatureGate, Router}
 
-  # The LiveViews no feature owns.
   @platform_pages ~w(/ /settings)
 
-  # `bypass_through/2` runs the matched route's pipelines and skips its action, so the
-  # walk triggers no side effects. Path parameters get a placeholder value. A pipeline
-  # that lets the request through leaves no status; that counts as 200.
   defp pipeline_status(verb, path) do
     path = String.replace(path, ~r"/[:*][^/]+", "/1")
     conn = build_conn() |> bypass_through(Router) |> dispatch(@endpoint, verb, path)
@@ -26,12 +20,10 @@ defmodule LanternhallWeb.RouterTest do
 
     assert for({route, status} <- statuses, status >= 500, do: route) == []
 
-    # Gate plugs ran: the disabled fixture feature's routes answer 404.
     assert statuses[{:get, "/fixtures/personal"}] == 404
     assert statuses[{:post, "/fixtures/personal/plain"}] == 404
   end
 
-  # The LiveDashboard route is compiled in dev only (config/dev.exs sets `dev_routes`).
   test "no /dev route is compiled outside dev" do
     assert for(%{path: "/dev" <> _ = path} <- Router.__routes__(), do: path) == []
   end

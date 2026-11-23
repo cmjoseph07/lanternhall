@@ -1,6 +1,4 @@
 defmodule LanternhallWeb.Plugs.FeatureGateTest do
-  # Real requests to the running test server (http://localhost:4002), so a gated route's
-  # reply is compared with the reply for a URL that has no route, as the browser sees both.
   use ExUnit.Case, async: true
 
   alias LanternhallWeb.Plugs.FeatureGate
@@ -10,7 +8,6 @@ defmodule LanternhallWeb.Plugs.FeatureGateTest do
     RawHTTP.request("GET #{path} HTTP/1.1", [{"host", "localhost:4002"}, {"accept", accept}])
   end
 
-  # No CSRF token: the gate must answer before the browser pipeline's forgery check.
   defp post(path) do
     RawHTTP.request("POST #{path} HTTP/1.1", [
       {"host", "localhost:4002"},
@@ -19,13 +16,10 @@ defmodule LanternhallWeb.Plugs.FeatureGateTest do
     ])
   end
 
-  # Header values such as the CSP nonce and request id differ per request; names must not.
   defp shape(response) do
     {response.status, response.headers["content-type"], Map.keys(response.headers), response.body}
   end
 
-  # The reply the tests below compare a disabled feature's routes with, pinned here so
-  # they cannot all change together unnoticed.
   describe "a URL with no route" do
     test "answers 404 with the status message as HTML" do
       response = get("/no-such-page")
@@ -58,8 +52,6 @@ defmodule LanternhallWeb.Plugs.FeatureGateTest do
     assert shape(disabled) == shape(get("/no-such-page"))
   end
 
-  # The gate runs before the browser pipeline, so its format negotiation and CSRF check
-  # never get to answer 406 or 403 for a route that should not exist.
   test "a disabled feature's plain route answers like a URL with no route for any request" do
     assert shape(get("/fixtures/personal/plain", "application/json")) ==
              shape(get("/no-such-page", "application/json"))

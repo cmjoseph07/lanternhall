@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Work do
-  @moduledoc """
-  Synthetic `:work` feature that depends on another optional feature, so enabling it alone
-  proves the disabled-dependency check.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

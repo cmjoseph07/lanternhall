@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.ImproperLists do
-  @moduledoc """
-  Broken registry fixture: `depends_on/0` and `config_keys/0` return improper lists, which
-  `Enum` functions crash on.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

@@ -4,7 +4,6 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
   alias LanternhallWeb.Plugs.SecurityHeaders
   alias LanternhallWeb.RawHTTP
 
-  # SPEC-platform.md section 3.3, character for character; only the nonce varies.
   @csp ~r/\Adefault-src 'none'; script-src 'self' 'nonce-(?<nonce>[A-Za-z0-9+\/]{22}==)'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'\z/
 
   @other_headers %{
@@ -75,9 +74,6 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       assert_security_headers(conn)
     end
 
-    # Real requests to the running test server. Each fails outside the router's own error
-    # handling: in an endpoint plug before the router runs, or as an exit, which the
-    # router passes on as it is.
     for {why, request_line, headers, body, status} <- [
           {"a JSON body that does not parse", "POST /healthz HTTP/1.1",
            [{"content-type", "application/json"}, {"content-length", "1"}], "{", 400},
@@ -115,7 +111,6 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       %{opts: SecurityHeaders.init(dev_tools: true)}
     end
 
-    # 399 is the highest status below an error, so it pins the boundary.
     for status <- [200, 302, 399] do
       test "a #{status} page also allows the live-reload frame", %{conn: conn, opts: opts} do
         conn = conn |> SecurityHeaders.call(opts) |> send_resp(unquote(status), "")
@@ -126,8 +121,6 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       end
     end
 
-    # Every page embeds the live-reload frame, so it allows its own origin; no page
-    # embeds LiveDashboard. 500 shows that a dev tool's own error keeps its rule.
     for {path, ancestors} <- [
           {"/phoenix/live_reload/frame", "'self'"},
           {"/dev/dashboard/home", "'none'"}
@@ -147,7 +140,6 @@ defmodule LanternhallWeb.Plugs.SecurityHeadersTest do
       end
     end
 
-    # 400 is the lowest error status, so it pins the boundary.
     for status <- [400, 404, 500] do
       test "a #{status} error page keeps only frame-ancestors 'none' for the debugger",
            %{conn: conn, opts: opts} do

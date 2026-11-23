@@ -1,8 +1,4 @@
 defmodule LanternhallWeb.Platform.Settings.InstallLive do
-  @moduledoc """
-  Settings > Install: the install config this node booted with, the versions it runs
-  and how long it has been up (SPEC-platform.md section 3.6).
-  """
   use LanternhallWeb, :live_view
 
   alias Lanternhall.Platform.{Config, Uptime}
@@ -84,7 +80,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
 
   attr :value, :string, required: true
 
-  # Long paths wrap after a slash, never inside a directory name.
   defp path(assigns) do
     assigns = assign(assigns, :parts, String.split(assigns.value, ~r{(?<=/)}))
 
@@ -136,7 +131,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
   defp app_version(app), do: to_string(Application.spec(app, :vsn))
 
   # `System.otp_release/0` gives only the major version; the full one is in a file.
-  # The path is built from the runtime's own root and release, never from input.
   # sobelow_skip ["Traversal.FileModule"]
   defp otp_version do
     path = Path.join([:code.root_dir(), "releases", System.otp_release(), "OTP_VERSION"])

@@ -1,7 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Invalid.BareConfigKey do
-  @moduledoc """
-  Broken registry fixture: lists a config key without its validator.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true

@@ -1,9 +1,9 @@
 defmodule LanternhallWeb.Router do
   use LanternhallWeb, :router
 
-  # No `put_secure_browser_headers` here: LanternhallWeb.Plugs.SecurityHeaders sets the
-  # CSP (with a per-request nonce) and the other security headers on every response in
-  # the endpoint, before this router runs; Phoenix's default CSP would replace it.
+  # Sobelow sees headers only in `put_secure_browser_headers` (Config.Headers) and then
+  # wants a static CSP in its arguments (Config.CSP), which `merge_resp_headers` would
+  # put over the per-request nonce CSP from LanternhallWeb.Plugs.SecurityHeaders.
   # sobelow_skip ["Config.Headers"]
   pipeline :browser do
     plug :accepts, ["html"]
@@ -17,6 +17,9 @@ defmodule LanternhallWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # No route sits in a `live_session` block: every LiveView is in the default one, so a
+  # navigate between any two pages keeps the document. Between two `live_session`s it
+  # would be a full page load.
   scope "/", LanternhallWeb do
     pipe_through :browser
 
@@ -30,21 +33,6 @@ defmodule LanternhallWeb.Router do
     get "/healthz", HealthController, :show
   end
 
-  # Each feature's routes follow this shape (SPEC-platform.md section 3.2): one scope that
-  # pipes through the feature's gate pipeline (holding `LanternhallWeb.Plugs.FeatureGate`)
-  # *before* `:browser`, so a disabled feature's URL answers 404 before format negotiation
-  # or the CSRF check can answer 406 or 403. Its LiveViews also mount the gate themselves
-  # (`on_mount {LanternhallWeb.FeatureGate, id}`), as a connected mount or a live
-  # navigation never passes through the router's pipelines.
-  #
-  # No route sits in a `live_session` block: every LiveView is in the default one, so a
-  # navigate between any two pages keeps the document. Between two `live_session`s it
-  # would be a full page load.
-  #
-  # test/lanternhall_web/router_test.exs checks every route's gates, so a missing gate or
-  # a gate id that names no feature fails the suite, not a request. Test compiles these
-  # routes for the fixture features in test/support/fixtures/features/; dev and prod
-  # never do.
   if Application.compile_env(:lanternhall, :fixture_routes, false) do
     pipeline :fixture_core_gate do
       plug LanternhallWeb.Plugs.FeatureGate, :fixture_core
@@ -73,6 +61,5 @@ defmodule LanternhallWeb.Router do
     end
   end
 
-  # LiveDashboard at /dev/dashboard, compiled in dev only (config/dev.exs sets `dev_routes`).
   use LanternhallWeb.DevRoutes
 end

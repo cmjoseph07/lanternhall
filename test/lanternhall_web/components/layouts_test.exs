@@ -6,7 +6,6 @@ defmodule LanternhallWeb.LayoutsTest do
   @theme_js Path.expand("../../../assets/js/theme.js", __DIR__)
 
   describe "the page title" do
-    # The fixture page sets no title of its own.
     test "is the app name alone on a page that sets none", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/fixtures/core")
 
@@ -15,7 +14,6 @@ defmodule LanternhallWeb.LayoutsTest do
   end
 
   describe "a flash" do
-    # The fixture page puts one flash of each kind with `?flashes`.
     setup %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/fixtures/core?flashes")
 
@@ -36,7 +34,6 @@ defmodule LanternhallWeb.LayoutsTest do
   end
 
   describe "the reconnect notices" do
-    # Only the client shows them, when it loses the connection.
     for id <- ~w(client-error server-error) do
       test "##{id} starts hidden", %{conn: conn} do
         {:ok, view, _html} = live(conn, ~p"/fixtures/core")
@@ -47,7 +44,6 @@ defmodule LanternhallWeb.LayoutsTest do
   end
 
   describe "the theme script" do
-    # Biome checks the file, so the page must run the file and nothing else inline.
     test "is assets/js/theme.js as written", %{conn: conn} do
       inline =
         conn

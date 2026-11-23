@@ -1,16 +1,8 @@
-// Renders the favicon and PWA icons from priv/static/images/logo-mark.svg
-// (SPEC-platform.md section 3.8). Run with `pnpm --dir assets run icons`.
-//
-// Uses the Chromium that Playwright already pins for the E2E tests, so no image
-// library is needed. The output is committed; this script is the only way to change it.
-
 import { readFile, writeFile } from "node:fs/promises"
 import { chromium } from "playwright"
 
 const images = new URL("../../priv/static/images/", import.meta.url)
 
-// Background of the opaque icons: the logo's ink, the dark theme's base color.
-// Keep in sync with `background_color` and `theme_color` in priv/static/manifest.webmanifest.
 const ink = "#121222"
 
 // `markSize` is the mark's share of the icon edge. The maskable icon keeps the
@@ -27,7 +19,6 @@ const pngs = [
 
 const mark = await readFile(new URL("logo-mark.svg", images), "utf8")
 
-// The favicon is the mark itself, minus the comments a browser never needs.
 await writeFile(new URL("favicon.svg", images), mark.replace(/\n?\s*<!--.*?-->/gs, ""))
 
 const browser = await chromium.launch()

@@ -18,8 +18,6 @@ defmodule Lanternhall.RepoTest do
     assert journal_mode(database) == "wal"
   end
 
-  # Asked of a connection the app itself opened, so this is the mode in force, whatever
-  # the config files say.
   test "the running repo is in WAL mode" do
     :ok = Sandbox.checkout(Lanternhall.Repo)
 
@@ -52,7 +50,6 @@ defmodule Lanternhall.RepoTest do
     :ok = Driver.close(locker)
   end
 
-  # How long it waits is set explicitly, not left to the driver's default.
   test "the repo is given a busy timeout of 2 seconds" do
     assert Lanternhall.Repo.config()[:busy_timeout] == 2000
   end

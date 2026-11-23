@@ -1,7 +1,6 @@
 # Example install config for a work machine (SPEC.md section 5 "Config").
 # Copy it to ~/.config/lanternhall/config.exs, or point LANTERNHALL_CONFIG at your copy,
 # then check it with `mix lanternhall.config.check <path>`.
-# Run dev as a work install: LANTERNHALL_CONFIG=config/install/work.example.exs iex -S mix phx.server
 # It holds no secrets: credentials live encrypted in the database.
 import Config
 

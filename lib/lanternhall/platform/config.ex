@@ -1,15 +1,5 @@
 defmodule Lanternhall.Platform.Config do
   @moduledoc """
-  The install config: one Elixir file per install that names its kind, port, modules,
-  time zone and data directory (SPEC-platform.md section 3.1).
-
-  Features add keys of their own and are enabled through `modules`, so the file is
-  checked against the feature registry (`Lanternhall.Platform.Features`) too.
-
-  `config/runtime.exs` loads and validates it before any app starts, so a bad value
-  stops boot with one line per problem. `Lanternhall.Application` then moves it out of
-  the app env into `:persistent_term`, and the rest of the app reads it through `get/0`.
-
   Problems are data until that single raise: `path/1` and `check/3` return
   `{:error, [{key, reason}]}`, where `key` is the config key, the environment variable
   to set, the file path for problems with the file itself, or "the feature registry" for
@@ -130,7 +120,6 @@ defmodule Lanternhall.Platform.Config do
   @spec get() :: t()
   def get, do: :persistent_term.get(@persistent_term_key)
 
-  # A default path, built on the directory an environment variable names.
   defp default_path(env, variable, rest) do
     case path_problem(env[variable]) do
       nil -> {:ok, Path.join([env[variable] | rest])}
@@ -158,7 +147,6 @@ defmodule Lanternhall.Platform.Config do
   # The compiler reports an undefined variable or function as a diagnostic, then raises
   # an error that says only "cannot compile file (errors have been logged)". Capturing the
   # diagnostics keeps its multi-line report off stderr and gives each error a line here.
-  # Warnings are not problems with the file, so they are printed as Elixir prints them.
   #
   # The file is code, so it can also throw or exit. Both are caught: an exit left alone
   # would end the caller, and Mix takes `exit({:shutdown, 0})` as success.
@@ -234,8 +222,6 @@ defmodule Lanternhall.Platform.Config do
     end
   end
 
-  # Platform keys first. Feature keys are checked only once kind and modules give a valid
-  # enabled set, because which keys exist depends on it.
   defp validate_keys(install, env, features) do
     platform = Enum.map(@known, &{&1, validate_key(&1, Keyword.get_values(install, &1), env)})
     fields = for {key, {:ok, value}} <- platform, into: %{}, do: {key, value}
@@ -264,7 +250,6 @@ defmodule Lanternhall.Platform.Config do
 
   defp errors(results), do: for({key, {:error, reason}} <- results, do: {key, reason})
 
-  # Any other result is a bug in the feature, not a problem with the install's value.
   defp feature_key_error({_key, _feature, {:ok, _value}}), do: []
 
   defp feature_key_error({key, _feature, {:error, reason}}) when is_binary(reason),
@@ -282,8 +267,6 @@ defmodule Lanternhall.Platform.Config do
 
   defp enabled_features(_fields, _features), do: {nil, []}
 
-  # A key a feature owns is unknown only while that feature is disabled; with no valid
-  # enabled set yet, it cannot be judged.
   defp unknown_keys(install, enabled, features) do
     owners =
       for feature <- features, {key, _} <- feature.config_keys(), into: %{}, do: {key, feature}
@@ -365,9 +348,8 @@ defmodule Lanternhall.Platform.Config do
     end
   end
 
-  # Why a path cannot be used as written, or nil. ".." is refused, not resolved: resolving
-  # it in text can name a different directory than the OS reaches when a symlink comes
-  # before it.
+  # ".." is refused, not resolved: resolving it in text can name a different directory
+  # than the OS reaches when a symlink comes before it.
   defp path_problem(path) do
     cond do
       not absolute?(path) -> "must be an absolute path, got #{inspect(path)}"

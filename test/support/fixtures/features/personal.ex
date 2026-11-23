@@ -1,8 +1,5 @@
 defmodule Lanternhall.Fixtures.Features.Personal do
-  @moduledoc """
-  Synthetic `:personal` feature: supervises one child and owns a required config key.
-  Disabled in the test install, so it proves a disabled feature contributes nothing.
-  """
+  @moduledoc false
   @behaviour Lanternhall.Platform.Feature
 
   @impl true
@@ -19,7 +16,6 @@ defmodule Lanternhall.Fixtures.Features.Personal do
 
   @impl true
   def children(config) do
-    # Default child id `Agent`, the same as the other fixture's, as unrelated features' ids may be.
     [{Agent, fn -> config.feature_config.fixture_greeting end}]
   end
 

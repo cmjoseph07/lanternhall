@@ -104,7 +104,6 @@ defmodule Mix.Tasks.Lanternhall.Tailwind.Install do
     end
   end
 
-  # The binary is about 80 MB: hashed in chunks, never held in memory whole.
   defp sha256(path) do
     if File.regular?(path) do
       path
