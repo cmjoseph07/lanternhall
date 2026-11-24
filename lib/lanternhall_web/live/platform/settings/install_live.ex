@@ -1,7 +1,7 @@
 defmodule LanternhallWeb.Platform.Settings.InstallLive do
   use LanternhallWeb, :live_view
 
-  alias Lanternhall.Platform.{Config, Uptime}
+  alias Lanternhall.Platform.{Config, Features, Uptime}
 
   @tick :timer.minutes(1)
 
@@ -12,6 +12,7 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
      |> assign(
        page_title: "Settings",
        config: Config.get(),
+       module_ids: Features.enabled_ids(),
        serving_port: LanternhallWeb.Endpoint.config(:http)[:port],
        versions: versions()
      )
@@ -46,7 +47,7 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
             <.path value={@config.path} />
           </.fact>
           <.fact id="install-modules" label="Modules" mono>
-            {Enum.map_join(@config.features, ", ", & &1.id())}
+            {Enum.join(@module_ids, ", ")}
           </.fact>
         </dl>
       </section>
@@ -88,23 +89,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
     """
   end
 
-  @doc """
-  Formats a duration in milliseconds in its largest two units, for example `"3 d 4 h"`.
-  """
-  @spec format_uptime(non_neg_integer()) :: String.t()
-  def format_uptime(milliseconds) do
-    minutes = div(milliseconds, :timer.minutes(1))
-    {hours, minutes} = {div(minutes, 60), rem(minutes, 60)}
-    {days, hours} = {div(hours, 24), rem(hours, 24)}
-
-    cond do
-      days > 0 -> "#{days} d #{hours} h"
-      hours > 0 -> "#{hours} h #{minutes} min"
-      minutes > 0 -> "#{minutes} min"
-      true -> "under a minute"
-    end
-  end
-
   defp tick_while_connected(socket) do
     if connected?(socket) do
       {:ok, _ref} = :timer.send_interval(@tick, :tick)
@@ -115,7 +99,7 @@ defmodule LanternhallWeb.Platform.Settings.InstallLive do
   end
 
   defp assign_uptime(socket) do
-    assign(socket, uptime: format_uptime(Uptime.milliseconds()))
+    assign(socket, uptime: Uptime.format(Uptime.milliseconds()))
   end
 
   defp versions do

@@ -25,4 +25,17 @@ defmodule Lanternhall.Platform.UptimeTest do
       Uptime.mark_started(System.monotonic_time(:millisecond))
     end
   end
+
+  describe "format/1" do
+    test "reads in the largest two units" do
+      assert Uptime.format(0) == "under a minute"
+      assert Uptime.format(59_999) == "under a minute"
+      assert Uptime.format(60_000) == "1 min"
+      assert Uptime.format(:timer.minutes(59) + 59_999) == "59 min"
+      assert Uptime.format(:timer.hours(1)) == "1 h 0 min"
+      assert Uptime.format(:timer.hours(23) + :timer.minutes(5)) == "23 h 5 min"
+      assert Uptime.format(:timer.hours(24)) == "1 d 0 h"
+      assert Uptime.format(:timer.hours(24 * 9 + 3) + 1) == "9 d 3 h"
+    end
+  end
 end

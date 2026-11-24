@@ -1,7 +1,7 @@
 defmodule LanternhallWeb.Platform.LandingLive do
   use LanternhallWeb, :live_view
 
-  alias Lanternhall.Platform.Config
+  alias Lanternhall.Platform.{Config, Features}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -11,7 +11,7 @@ defmodule LanternhallWeb.Platform.LandingLive do
      assign(socket,
        page_title: "Landing",
        kind: config.kind,
-       module_ids: Enum.map(config.features, & &1.id()),
+       module_ids: Features.enabled_ids(),
        version: Lanternhall.version()
      )}
   end

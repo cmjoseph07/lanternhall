@@ -4,7 +4,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
   import Phoenix.LiveViewTest
 
   alias Lanternhall.Platform.{Config, Uptime}
-  alias LanternhallWeb.Platform.Settings.InstallLive
 
   describe "the page" do
     setup %{conn: conn} do
@@ -75,19 +74,6 @@ defmodule LanternhallWeb.Platform.Settings.InstallLiveTest do
       Uptime.mark_started(DateTime.add(DateTime.utc_now(), -75, :hour))
       send(view.pid, :tick)
       assert has_element?(view, "#uptime", "3 d 3 h")
-    end
-  end
-
-  describe "format_uptime/1" do
-    test "reads in the largest two units" do
-      assert InstallLive.format_uptime(0) == "under a minute"
-      assert InstallLive.format_uptime(59_999) == "under a minute"
-      assert InstallLive.format_uptime(60_000) == "1 min"
-      assert InstallLive.format_uptime(:timer.minutes(59) + 59_999) == "59 min"
-      assert InstallLive.format_uptime(:timer.hours(1)) == "1 h 0 min"
-      assert InstallLive.format_uptime(:timer.hours(23) + :timer.minutes(5)) == "23 h 5 min"
-      assert InstallLive.format_uptime(:timer.hours(24)) == "1 d 0 h"
-      assert InstallLive.format_uptime(:timer.hours(24 * 9 + 3) + 1) == "9 d 3 h"
     end
   end
 end

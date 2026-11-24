@@ -91,6 +91,10 @@ defmodule Lanternhall.Platform.Features do
   @spec unknown_keys([module()], keyword()) :: [Config.error()]
   def unknown_keys(features, entries), do: stray_keys(features, features, entries)
 
+  @doc "The ids of the enabled set stored at boot."
+  @spec enabled_ids() :: [Feature.id()]
+  def enabled_ids, do: Enum.map(Config.get().features, & &1.id())
+
   @doc """
   Whether feature `id` is in the enabled set stored at boot. Raises for an id no feature
   has, so a mistyped route gate fails loudly instead of quietly answering 404.
@@ -98,7 +102,7 @@ defmodule Lanternhall.Platform.Features do
   @spec enabled?(Feature.id()) :: boolean()
   def enabled?(id) do
     cond do
-      Enum.any?(Config.get().features, &(&1.id() == id)) -> true
+      id in enabled_ids() -> true
       Enum.any?(all(), &(&1.id() == id)) -> false
       true -> raise ArgumentError, "no feature has id #{inspect(id)}"
     end

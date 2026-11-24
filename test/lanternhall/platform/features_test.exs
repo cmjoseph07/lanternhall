@@ -334,6 +334,12 @@ defmodule Lanternhall.Platform.FeaturesTest do
     end
   end
 
+  describe "enabled_ids/0" do
+    test "names the enabled set stored at boot, in its order" do
+      assert Features.enabled_ids() == [:platform, :fixture_core]
+    end
+  end
+
   describe "enabled?/1" do
     test "is true for a feature in the enabled set stored at boot" do
       assert Features.enabled?(:fixture_core)
