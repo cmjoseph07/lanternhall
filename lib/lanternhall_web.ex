@@ -27,6 +27,8 @@ defmodule LanternhallWeb do
     quote do
       use Phoenix.LiveView
 
+      on_mount LanternhallWeb.StaticReload
+
       unquote(html_helpers())
     end
   end

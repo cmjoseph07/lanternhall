@@ -2,7 +2,7 @@ defmodule LanternhallWeb.RouterTest do
   use LanternhallWeb.ConnCase, async: false
 
   alias Lanternhall.Platform.Features
-  alias LanternhallWeb.{DisabledFeatureError, FeatureGate, Router}
+  alias LanternhallWeb.{DisabledFeatureError, FeatureGate, Router, StaticReload}
 
   @platform_routes ~w(/ /settings /healthz)
 
@@ -41,6 +41,16 @@ defmodule LanternhallWeb.RouterTest do
     assert sessions |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> length() == 1, inspect(sessions)
   end
 
+  test "every LiveView mounts the static reload hook" do
+    views =
+      for %{metadata: %{phoenix_live_view: {view, _action, _opts, _session}}} <-
+            Router.__routes__(),
+          do: view
+
+    assert views != []
+    assert for(view <- views, {StaticReload, :default} not in mount_hooks(view), do: view) == []
+  end
+
   describe "with every feature disabled" do
     setup context do
       put_install(context, features: [])
@@ -69,6 +79,8 @@ defmodule LanternhallWeb.RouterTest do
       assert {"/fixtures/personal", :fixture_personal, [:fixture_personal]} in gates
     end
   end
+
+  defp mount_hooks(view), do: Enum.map(view.__live__().lifecycle.mount, & &1.id)
 
   defp feature_routes do
     Enum.reject(Router.__routes__(), &(&1.path in @platform_routes))

@@ -5,6 +5,7 @@ defmodule LanternhallWeb.ConnCase do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Lanternhall.Platform.Config
+  alias LanternhallWeb.Endpoint
 
   using do
     quote do
@@ -41,6 +42,18 @@ defmodule LanternhallWeb.ConnCase do
     store_install(struct!(config, fields))
     on_exit(fn -> store_install(config) end)
   end
+
+  def put_static_manifest(%{async: false, tmp_dir: tmp_dir}, latest) do
+    manifest = Path.join(tmp_dir, "cache_manifest.json")
+    File.write!(manifest, JSON.encode!(%{latest: latest, digests: %{}}))
+    from_app = Path.relative_to(manifest, Application.app_dir(:lanternhall), force: true)
+
+    config = Application.fetch_env!(:lanternhall, Endpoint)
+    change_endpoint(Keyword.put(config, :cache_static_manifest, {:lanternhall, from_app}))
+    on_exit(fn -> change_endpoint(config) end)
+  end
+
+  defp change_endpoint(config), do: :ok = Endpoint.config_change([{Endpoint, config}], [])
 
   defp store_install(config) do
     Application.put_env(:lanternhall, :install, config)
